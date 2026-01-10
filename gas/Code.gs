@@ -163,19 +163,19 @@ function processNumericMode(input) {
 function processNaturalMode(input, options) {
   // 標準化輸入
   const normalizedInput = normalizeInput(input);
-  
+
   // 建立 prompt
   const { systemPrompt, userMessage } = buildPromptWithExamples(normalizedInput);
-  
-  // 呼叫 Groq API
-  const result = callGroqApi(systemPrompt, userMessage, {
-    model: options.model,
+
+  // 呼叫 LLM API（傳遞完整 options，包含 api_key 和 provider）
+  const result = callLLMApi(systemPrompt, userMessage, {
+    ...options,
     temperature: 0.1
   });
-  
+
   // 確保有 success 欄位
   result.success = true;
-  
+
   return result;
 }
 
