@@ -24,22 +24,34 @@ function doGet(e) {
  * 處理 POST 請求
  * @param {Object} e - 請求物件
  * @returns {TextOutput} JSON 回應
+ *
+ * 請求格式：
+ * {
+ *   "input": "右上 1.2 2 2 3 0 0",  // 必填：輸入文字
+ *   "mode": "numeric",              // 選填：'numeric' 或 'natural'（自動偵測）
+ *   "api_key": "gsk_xxx..."         // 自然語言模式必填：Groq API Key
+ * }
  */
 function doPost(e) {
   try {
     // 解析請求內容
     const requestBody = JSON.parse(e.postData.contents);
-    const { input, mode, options = {} } = requestBody;
-    
+    const { input, mode, api_key, options = {} } = requestBody;
+
     if (!input) {
       return createErrorResponse('Missing required field: input');
     }
-    
+
+    // 將 api_key 加入 options
+    if (api_key) {
+      options.api_key = api_key;
+    }
+
     // 處理報告
     const result = processReport(input, mode, options);
-    
+
     return createSuccessResponse(result);
-    
+
   } catch (error) {
     console.error('Error processing request:', error);
     return createErrorResponse(error.message);

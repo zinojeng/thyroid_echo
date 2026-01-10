@@ -28,9 +28,7 @@
 {
   "input": "右上 1.2 2 2 3 0 0",
   "mode": "numeric",
-  "options": {
-    "model": "llama-3.1-70b-versatile"
-  }
+  "api_key": "gsk_your_groq_api_key"
 }
 ```
 
@@ -38,9 +36,18 @@
 
 | 參數 | 類型 | 必填 | 說明 |
 |------|------|------|------|
-| input | string | 是 | 口述文字內容 |
-| mode | string | 否 | "numeric" 或 "natural"，不指定則自動偵測 |
-| options.model | string | 否 | Groq 模型名稱（自然語言模式使用） |
+| input | string | ✓ 必填 | 口述文字內容 |
+| mode | string | 選填 | "numeric" 或 "natural"，不指定則自動偵測 |
+| api_key | string | 自然語言模式必填 | 你的 Groq API Key（格式：`gsk_...`）|
+
+> **注意**：數字模式不需要 API Key，自然語言模式需要提供 Groq API Key。
+
+### 取得 Groq API Key
+
+1. 前往 https://console.groq.com/
+2. 註冊/登入帳號
+3. 點擊「API Keys」→「Create API Key」
+4. 複製 API Key（格式：`gsk_...`）
 
 ## 輸入格式
 
@@ -180,15 +187,18 @@
 # 測試連線
 curl -X GET "YOUR_DEPLOYMENT_URL"
 
-# 數字模式
+# 數字模式（不需要 API Key）
 curl -X POST "YOUR_DEPLOYMENT_URL" \
   -H "Content-Type: application/json" \
   -d '{"input": "右上 1.2 2 2 3 0 0"}'
 
-# 自然語言模式
+# 自然語言模式（需要提供 API Key）
 curl -X POST "YOUR_DEPLOYMENT_URL" \
   -H "Content-Type: application/json" \
-  -d '{"input": "右側甲狀腺上極一點二公分結節，實質低回聲，高比寬"}'
+  -d '{
+    "input": "右側甲狀腺上極一點二公分結節，實質低回聲，高比寬",
+    "api_key": "gsk_your_groq_api_key"
+  }'
 ```
 
 ## 整合 Typeless/Voquill
@@ -199,14 +209,27 @@ curl -X POST "YOUR_DEPLOYMENT_URL" \
 
 **整合範例（JavaScript）：**
 ```javascript
-async function structureReport(transcript) {
+async function structureReport(transcript, apiKey) {
+  const body = { input: transcript };
+
+  // 自然語言模式需要 API Key
+  if (apiKey) {
+    body.api_key = apiKey;
+  }
+
   const response = await fetch('YOUR_DEPLOYMENT_URL', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input: transcript })
+    body: JSON.stringify(body)
   });
   return await response.json();
 }
+
+// 數字模式（不需要 API Key）
+structureReport('右上 1.2 2 2 3 0 0');
+
+// 自然語言模式（需要 API Key）
+structureReport('右側甲狀腺一點二公分結節', 'gsk_your_api_key');
 ```
 
 ## 版本歷史

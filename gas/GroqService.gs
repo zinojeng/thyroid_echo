@@ -18,27 +18,35 @@ const GROQ_CONFIG = {
 };
 
 /**
- * 從 Script Properties 取得 API Key
+ * 取得 API Key（優先使用傳入的 key，其次使用 Script Properties）
+ * @param {string} apiKey - 使用者提供的 API Key（可選）
  * @returns {string} Groq API Key
  */
-function getGroqApiKey() {
-  const props = PropertiesService.getScriptProperties();
-  const apiKey = props.getProperty('GROQ_API_KEY');
-  if (!apiKey) {
-    throw new Error('GROQ_API_KEY not set. Please set it in Script Properties.');
+function getGroqApiKey(apiKey) {
+  // 優先使用使用者提供的 API Key
+  if (apiKey && apiKey.trim()) {
+    return apiKey.trim();
   }
-  return apiKey;
+
+  // 備用：從 Script Properties 取得
+  const props = PropertiesService.getScriptProperties();
+  const storedKey = props.getProperty('GROQ_API_KEY');
+  if (storedKey) {
+    return storedKey;
+  }
+
+  throw new Error('Missing API Key. Please provide "api_key" in your request or set GROQ_API_KEY in Script Properties.');
 }
 
 /**
  * 呼叫 Groq API
  * @param {string} systemPrompt - System prompt
  * @param {string} userMessage - User message
- * @param {Object} options - Optional settings
+ * @param {Object} options - Optional settings (including api_key)
  * @returns {Object} Parsed JSON response
  */
 function callGroqApi(systemPrompt, userMessage, options = {}) {
-  const apiKey = getGroqApiKey();
+  const apiKey = getGroqApiKey(options.api_key);
   const model = options.model || GROQ_CONFIG.defaultModel;
   
   const payload = {
