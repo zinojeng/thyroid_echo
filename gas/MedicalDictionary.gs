@@ -3,7 +3,7 @@
  * 中英對照、口語變體、縮寫展開
  */
 
-// 回音性術語對照
+// 回音性術語對照（擴充版 - 涵蓋口語、拼寫變體）
 const ECHOGENICITY_TERMS = {
   // 0 分：無回音 (anechoic)
   '無回音': 0,
@@ -11,8 +11,15 @@ const ECHOGENICITY_TERMS = {
   '無迴音': 0,
   '無迴聲': 0,
   '完全無回音': 0,
+  '純無回音': 0,
+  '全無回音': 0,
+  '無echo': 0,
   'anechoic': 0,
+  'an-echoic': 0,
   'echo-free': 0,
+  'echo free': 0,
+  'no echo': 0,
+  'without echo': 0,
 
   // 1 分：等回音或高回音 (hyperechoic/isoechoic)
   '等回音': 1,
@@ -27,11 +34,22 @@ const ECHOGENICITY_TERMS = {
   '高回音性': 1,
   '回音與周圍相同': 1,
   '回音與甲狀腺相同': 1,
+  '與周圍等回音': 1,
+  '與甲狀腺等回音': 1,
+  '正常回音': 1,
+  '回音正常': 1,
+  '均勻回音': 1,
+  '回音均勻': 1,
   'isoechoic': 1,
   'hyperechoic': 1,
   'iso-echoic': 1,
   'hyper-echoic': 1,
+  'iso echoic': 1,
+  'hyper echoic': 1,
   'echogenic': 1,
+  'normal echogenicity': 1,
+  'isointense': 1,
+  'hyperintense': 1,
 
   // 2 分：低回音 (hypoechoic)
   '低回音': 2,
@@ -42,9 +60,22 @@ const ECHOGENICITY_TERMS = {
   '減低回音': 2,
   '稍低回音': 2,
   '輕度低回音': 2,
+  '略低回音': 2,
+  '偏低回音': 2,
+  '回音偏低': 2,
+  '回音減低': 2,
+  '低於周圍': 2,
+  '比周圍低': 2,
   'hypoechoic': 2,
   'hypo-echoic': 2,
+  'hypo echoic': 2,
   'low echogenicity': 2,
+  'low echo': 2,
+  'decreased echogenicity': 2,
+  'reduced echogenicity': 2,
+  'hypointense': 2,
+  'mildly hypoechoic': 2,
+  'slightly hypoechoic': 2,
 
   // 3 分：極低回音 (very hypoechoic)
   '極低回音': 3,
@@ -54,13 +85,25 @@ const ECHOGENICITY_TERMS = {
   '明顯低回音': 3,
   '顯著低回音': 3,
   '重度低回音': 3,
+  '嚴重低回音': 3,
+  '很低回音': 3,
+  '特別低回音': 3,
+  '接近無回音': 3,
+  '近無回音': 3,
+  '幾乎無回音': 3,
   'very hypoechoic': 3,
   'markedly hypoechoic': 3,
   'very low echogenicity': 3,
-  'marked hypoechogenicity': 3
+  'marked hypoechogenicity': 3,
+  'marked hypoechoic': 3,
+  'severely hypoechoic': 3,
+  'profoundly hypoechoic': 3,
+  'extremely hypoechoic': 3,
+  'near anechoic': 3,
+  'almost anechoic': 3
 };
 
-// 成分術語對照
+// 成分術語對照（擴充版）
 const COMPOSITION_TERMS = {
   // 0 分：囊性或海綿狀 (cystic/spongiform)
   '囊性': 0,
@@ -73,11 +116,25 @@ const COMPOSITION_TERMS = {
   '蜂窩狀': 0,
   '多囊': 0,
   '囊': 0,
+  '水囊': 0,
+  '液性': 0,
+  '全囊性': 0,
+  '純液性': 0,
+  '無迴音囊性': 0,
+  '膠質囊腫': 0,
   'cystic': 0,
   'purely cystic': 0,
+  'pure cyst': 0,
+  'simple cyst': 0,
   'spongiform': 0,
   'sponge-like': 0,
+  'sponge like': 0,
   'honeycomb': 0,
+  'honeycomb appearance': 0,
+  'completely cystic': 0,
+  'almost completely cystic': 0,
+  'fluid-filled': 0,
+  'fluid filled': 0,
 
   // 1 分：混合性 (mixed cystic and solid)
   '混合': 1,
@@ -89,12 +146,27 @@ const COMPOSITION_TERMS = {
   '實囊性': 1,
   '以囊為主': 1,
   '以實質為主': 1,
+  '囊實': 1,
+  '實囊': 1,
+  '混合型': 1,
+  '部分囊': 1,
+  '部分實': 1,
+  '半實半囊': 1,
+  '實性為主': 1,
+  '囊性為主': 1,
   'mixed': 1,
   'mixed cystic and solid': 1,
+  'mixed solid and cystic': 1,
   'predominantly cystic': 1,
   'predominantly solid': 1,
   'partially cystic': 1,
   'partially solid': 1,
+  'solid and cystic': 1,
+  'cystic and solid': 1,
+  'complex': 1,
+  'complex cyst': 1,
+  'mixed composition': 1,
+  'part solid part cystic': 1,
 
   // 2 分：實質性 (solid)
   '實質': 2,
@@ -104,16 +176,27 @@ const COMPOSITION_TERMS = {
   '完全實質': 2,
   '固體': 2,
   '實': 2,
+  '全實質': 2,
+  '實性': 2,
+  '均質實性': 2,
+  '實質結節': 2,
+  '固實': 2,
+  '固態': 2,
   'solid': 2,
   'purely solid': 2,
+  'pure solid': 2,
   'almost completely solid': 2,
-  'solid composition': 2
+  'solid composition': 2,
+  'completely solid': 2,
+  'entirely solid': 2,
+  'homogeneous solid': 2,
+  'solid nodule': 2
 };
 
-// 形狀術語對照
-// 注意：Shape 只有 0 分和 3 分，沒有 1 或 2 分！
+// 形狀術語對照（擴充版）
+// ⚠️ 注意：Shape 只有 0 分和 3 分，沒有 1 或 2 分！
 const SHAPE_TERMS = {
-  // 0 分：寬大於高 (wider-than-tall)
+  // 0 分：寬大於高 (wider-than-tall) - 良性傾向
   '寬大於高': 0,
   '寬比高': 0,
   '寬>高': 0,
@@ -128,6 +211,16 @@ const SHAPE_TERMS = {
   '橢圓形': 0,
   '平行': 0,
   '平行於皮膚': 0,
+  '橫徑大於前後徑': 0,
+  '寬度大於高度': 0,
+  '橫比縱': 0,
+  '橫軸': 0,
+  '橫切面': 0,
+  '平臥': 0,
+  '水平': 0,
+  '正常形狀': 0,
+  '形狀正常': 0,
+  '無高比寬': 0,
   'wider than tall': 0,
   'wider-than-tall': 0,
   'wider than high': 0,
@@ -137,8 +230,15 @@ const SHAPE_TERMS = {
   'parallel': 0,
   'flat': 0,
   'oblate': 0,
+  'parallel orientation': 0,
+  'horizontal orientation': 0,
+  'width greater than height': 0,
+  'transverse': 0,
+  'not taller than wide': 0,
+  'wider': 0,
+  'round': 0,
 
-  // 3 分：高大於寬 (taller-than-wide)
+  // 3 分：高大於寬 (taller-than-wide) - 惡性傾向
   '高大於寬': 3,
   '高比寬': 3,
   '高>寬': 3,
@@ -151,19 +251,34 @@ const SHAPE_TERMS = {
   '垂直於皮膚': 3,
   '縱長': 3,
   '前後徑大於橫徑': 3,
+  '高度大於寬度': 3,
+  '縱比橫': 3,
+  '縱軸': 3,
+  '豎直': 3,
+  '站立': 3,
+  '非平行': 3,
+  '垂直生長': 3,
+  '向上生長': 3,
   'taller than wide': 3,
   'taller-than-wide': 3,
   'taller than high': 3,
   'vertical': 3,
   'upright': 3,
   'nonparallel': 3,
-  'perpendicular': 3
+  'non-parallel': 3,
+  'non parallel': 3,
+  'perpendicular': 3,
+  'antiparallel': 3,
+  'vertical orientation': 3,
+  'height greater than width': 3,
+  'taller': 3,
+  'longitudinal': 3
 };
 
-// 邊緣術語對照
-// 注意：Margin 只有 0, 2, 3 分，沒有 1 分！
+// 邊緣術語對照（擴充版）
+// ⚠️ 注意：Margin 只有 0, 2, 3 分，沒有 1 分！
 const MARGIN_TERMS = {
-  // 0 分：光滑或模糊 (smooth/ill-defined)
+  // 0 分：光滑或模糊 (smooth/ill-defined) - 良性傾向
   '光滑': 0,
   '平滑': 0,
   '圓滑': 0,
@@ -181,17 +296,38 @@ const MARGIN_TERMS = {
   '邊界不清': 0,
   '暈環': 0,
   '有暈環': 0,
+  '邊緣光滑': 0,
+  '邊界清楚': 0,
+  '邊界清晰': 0,
+  '界線清楚': 0,
+  '邊界規則': 0,
+  '輪廓清楚': 0,
+  '輪廓清晰': 0,
+  '輪廓光滑': 0,
+  '完整邊緣': 0,
+  '邊緣完整': 0,
+  '圓形邊緣': 0,
+  '無毛刺': 0,
   'smooth': 0,
   'well-defined': 0,
   'well defined': 0,
+  'well-demarcated': 0,
+  'well demarcated': 0,
   'ill-defined': 0,
   'ill defined': 0,
+  'poorly defined': 0,
+  'indistinct': 0,
   'halo': 0,
   'smooth margin': 0,
   'regular': 0,
   'regular margin': 0,
+  'circumscribed': 0,
+  'clear margin': 0,
+  'distinct margin': 0,
+  'sharp margin': 0,
+  'intact capsule': 0,
 
-  // 2 分：分葉狀或不規則 (lobulated/irregular)
+  // 2 分：分葉狀或不規則 (lobulated/irregular) - 可疑
   '分葉': 2,
   '分葉狀': 2,
   '分葉邊緣': 2,
@@ -205,14 +341,35 @@ const MARGIN_TERMS = {
   '棘狀': 2,
   '角狀': 2,
   '多角': 2,
+  '多角形': 2,
+  '不整齊': 2,
+  '邊緣不整齊': 2,
+  '星狀': 2,
+  '尖刺狀': 2,
+  '尖角': 2,
+  '多葉': 2,
+  '多葉狀': 2,
+  '波浪狀': 2,
+  '凹凸不平': 2,
+  '不平整': 2,
   'lobulated': 2,
   'irregular': 2,
   'irregular margin': 2,
   'spiculated': 2,
   'jagged': 2,
   'angulated': 2,
+  'lobular': 2,
+  'microlobulated': 2,
+  'micro-lobulated': 2,
+  'infiltrative': 2,
+  'serrated': 2,
+  'scalloped': 2,
+  'rough': 2,
+  'uneven': 2,
+  'notched': 2,
+  'stellate': 2,
 
-  // 3 分：甲狀腺外延伸 (extra-thyroidal extension)
+  // 3 分：甲狀腺外延伸 (extra-thyroidal extension) - 高度可疑
   '甲狀腺外延伸': 3,
   '甲狀腺外侵犯': 3,
   '甲外延伸': 3,
@@ -224,12 +381,30 @@ const MARGIN_TERMS = {
   '包膜侵犯': 3,
   '突出甲狀腺': 3,
   '超出甲狀腺': 3,
+  '甲外侵犯': 3,
+  '腺外延伸': 3,
+  '侵犯周圍': 3,
+  '外侵犯': 3,
+  '突破包膜': 3,
+  '穿透被膜': 3,
+  '侵入周圍組織': 3,
+  '侵及周圍': 3,
+  '累及周圍': 3,
   'extrathyroidal': 3,
   'extra-thyroidal extension': 3,
   'extrathyroidal extension': 3,
+  'extra-thyroidal': 3,
   'ETE': 3,
   'invasion': 3,
-  'capsular invasion': 3
+  'capsular invasion': 3,
+  'capsule invasion': 3,
+  'capsular breach': 3,
+  'extracapsular': 3,
+  'extracapsular extension': 3,
+  'beyond capsule': 3,
+  'through capsule': 3,
+  'invading': 3,
+  'invasive': 3
 };
 
 // 回音點/鈣化術語對照
