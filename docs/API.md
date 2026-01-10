@@ -28,7 +28,8 @@
 {
   "input": "右上 1.2 2 2 3 0 0",
   "mode": "numeric",
-  "api_key": "gsk_your_groq_api_key"
+  "api_key": "your_api_key",
+  "provider": "groq"
 }
 ```
 
@@ -38,16 +39,32 @@
 |------|------|------|------|
 | input | string | ✓ 必填 | 口述文字內容 |
 | mode | string | 選填 | "numeric" 或 "natural"，不指定則自動偵測 |
-| api_key | string | 自然語言模式必填 | 你的 Groq API Key（格式：`gsk_...`）|
+| api_key | string | 自然語言模式必填 | API Key（支援多種服務商）|
+| provider | string | 選填 | "grok"、"openai"、"gemini"（自動偵測）|
 
-> **注意**：數字模式不需要 API Key，自然語言模式需要提供 Groq API Key。
+> **注意**：數字模式不需要 API Key，自然語言模式需要提供 API Key。
 
-### 取得 Groq API Key
+## 支援的 LLM 服務商
 
-1. 前往 https://console.groq.com/
-2. 註冊/登入帳號
-3. 點擊「API Keys」→「Create API Key」
-4. 複製 API Key（格式：`gsk_...`）
+| 服務商 | 預設模型 | 特點 | API Key 格式 |
+|--------|----------|------|--------------|
+| **xAI Grok** | grok-4-1-fast-reasoning | CP值最高，推理能力強（推薦） | `xai-...` |
+| **OpenAI** | gpt-4o-mini | $0.15/1M tokens，品質穩定 | `sk-...` |
+| **Gemini** | gemini-3-flash-preview | 最新版本，免費額度高 | `AI...` |
+
+### 取得 API Key
+
+**xAI Grok（推薦，CP值最高）**
+1. 前往 https://console.x.ai/
+2. 註冊/登入 → API Keys → Create API Key
+
+**OpenAI（gpt-4o-mini，品質穩定）**
+1. 前往 https://platform.openai.com/api-keys
+2. 註冊/登入 → Create new secret key
+
+**Google Gemini（免費額度最高）**
+1. 前往 https://aistudio.google.com/apikey
+2. 登入 Google 帳號 → Create API Key
 
 ## 輸入格式
 
@@ -192,12 +209,28 @@ curl -X POST "YOUR_DEPLOYMENT_URL" \
   -H "Content-Type: application/json" \
   -d '{"input": "右上 1.2 2 2 3 0 0"}'
 
-# 自然語言模式（需要提供 API Key）
+# 自然語言模式 - 使用 xAI Grok（推薦，CP值最高）
 curl -X POST "YOUR_DEPLOYMENT_URL" \
   -H "Content-Type: application/json" \
   -d '{
     "input": "右側甲狀腺上極一點二公分結節，實質低回聲，高比寬",
-    "api_key": "gsk_your_groq_api_key"
+    "api_key": "xai-your_grok_api_key"
+  }'
+
+# 自然語言模式 - 使用 OpenAI（gpt-4o-mini）
+curl -X POST "YOUR_DEPLOYMENT_URL" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "右側甲狀腺上極一點二公分結節，實質低回聲，高比寬",
+    "api_key": "sk-your_openai_api_key"
+  }'
+
+# 自然語言模式 - 使用 Gemini（免費額度高）
+curl -X POST "YOUR_DEPLOYMENT_URL" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "右側甲狀腺上極一點二公分結節，實質低回聲，高比寬",
+    "api_key": "AIzaSy_your_gemini_api_key"
   }'
 ```
 
@@ -229,12 +262,18 @@ async function structureReport(transcript, apiKey) {
 structureReport('右上 1.2 2 2 3 0 0');
 
 // 自然語言模式（需要 API Key）
-structureReport('右側甲狀腺一點二公分結節', 'gsk_your_api_key');
+structureReport('右側甲狀腺一點二公分結節', 'xai-your_grok_api_key');
 ```
 
 ## 版本歷史
 
+- **1.1.0** (2026-01-11): 多 LLM 提供者支援
+  - 新增 xAI Grok 支援（推薦，CP值最高）
+  - 新增 OpenAI GPT-4o-mini 支援
+  - 新增 Google Gemini 支援
+  - API Key 由使用者提供，自動偵測服務提供者
+
 - **1.0.0** (2026-01-10): 初始版本
   - 支援數字快速模式
-  - 支援自然語言模式（Groq LLM）
+  - 支援自然語言模式
   - ACR TI-RADS 2017 完整計分邏輯

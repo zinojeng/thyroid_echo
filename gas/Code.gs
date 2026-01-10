@@ -29,22 +29,31 @@ function doGet(e) {
  * {
  *   "input": "右上 1.2 2 2 3 0 0",  // 必填：輸入文字
  *   "mode": "numeric",              // 選填：'numeric' 或 'natural'（自動偵測）
- *   "api_key": "gsk_xxx..."         // 自然語言模式必填：Groq API Key
+ *   "api_key": "xai-xxx...",        // 自然語言模式必填：API Key
+ *   "provider": "grok"              // 選填：'grok'、'openai'、'gemini'（自動偵測）
  * }
+ *
+ * 支援的 API Key 格式：
+ * - xAI Grok: xai-xxx...（推薦，CP值最高）
+ * - OpenAI: sk-xxx...（gpt-4o-mini，品質穩定）
+ * - Gemini: AIxxx...（gemini-2.0-flash，免費額度高）
  */
 function doPost(e) {
   try {
     // 解析請求內容
     const requestBody = JSON.parse(e.postData.contents);
-    const { input, mode, api_key, options = {} } = requestBody;
+    const { input, mode, api_key, provider, options = {} } = requestBody;
 
     if (!input) {
       return createErrorResponse('Missing required field: input');
     }
 
-    // 將 api_key 加入 options
+    // 將 api_key 和 provider 加入 options
     if (api_key) {
       options.api_key = api_key;
+    }
+    if (provider) {
+      options.provider = provider;
     }
 
     // 處理報告

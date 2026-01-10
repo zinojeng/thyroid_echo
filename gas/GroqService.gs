@@ -95,14 +95,15 @@ function callGroqApi(systemPrompt, userMessage, options = {}) {
 /**
  * 結構化處理甲狀腺報告
  * @param {string} transcript - 輸入文字（數字模式或自然語言）
- * @param {Object} options - 選項
+ * @param {Object} options - 選項（包含 api_key, provider）
  * @returns {Object} 結構化報告
  */
 function structureThyroidReport(transcript, options = {}) {
   const systemPrompt = getStructuringPrompt();
   const userMessage = `請將以下甲狀腺超音波口述內容轉換為結構化 JSON：\n\n${transcript}`;
 
-  const result = callGroqApi(systemPrompt, userMessage, options);
+  // 使用統一的 LLM API 呼叫（支援 Groq、OpenAI、Gemini）
+  const result = callLLMApi(systemPrompt, userMessage, options);
 
   // 收集所有修正記錄
   const allCorrections = [];
