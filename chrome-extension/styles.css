@@ -1,0 +1,412 @@
+/**
+ * Thyroid Echo Report - Styles
+ * 醫療風格 UI 設計
+ */
+
+/* 基礎樣式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background: #f5f5f5;
+}
+
+.container {
+  width: 360px;
+  min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 16px;
+  position: relative;
+}
+
+/* 標題 */
+header {
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #2196F3;
+}
+
+header h1 {
+  font-size: 18px;
+  color: #1976D2;
+  margin-bottom: 4px;
+}
+
+header .subtitle {
+  font-size: 12px;
+  color: #666;
+}
+
+/* 區塊 */
+.section {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section h2 {
+  font-size: 14px;
+  color: #1976D2;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* 表單 */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2196F3;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* 按鈕 */
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #2196F3;
+  color: white;
+  width: 100%;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1976D2;
+}
+
+.btn-success {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #388E3C;
+}
+
+.btn-secondary {
+  background: #757575;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #616161;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+/* 錄音按鈕 */
+.record-container {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.btn-record {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.btn-record:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+}
+
+.btn-record.recording {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  animation: pulse 1.5s infinite;
+}
+
+.btn-record .mic-icon {
+  font-size: 36px;
+  margin-bottom: 4px;
+}
+
+.btn-record #record-status {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
+  70% { box-shadow: 0 0 0 20px rgba(244, 67, 54, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+}
+
+/* 錄音指示器 */
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  color: #f44336;
+  font-size: 12px;
+}
+
+.recording-indicator .pulse {
+  width: 8px;
+  height: 8px;
+  background: #f44336;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* 結果卡片 */
+.nodule-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-left: 4px solid #9e9e9e;
+}
+
+.nodule-card.category-tr1 { border-left-color: #4CAF50; }
+.nodule-card.category-tr2 { border-left-color: #8BC34A; }
+.nodule-card.category-tr3 { border-left-color: #FFC107; }
+.nodule-card.category-tr4 { border-left-color: #FF9800; }
+.nodule-card.category-tr5 { border-left-color: #f44336; }
+
+.nodule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.nodule-id {
+  font-weight: 600;
+  color: #333;
+}
+
+.nodule-category {
+  background: #333;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.category-tr1 .nodule-category { background: #4CAF50; }
+.category-tr2 .nodule-category { background: #8BC34A; }
+.category-tr3 .nodule-category { background: #FFC107; color: #333; }
+.category-tr4 .nodule-category { background: #FF9800; }
+.category-tr5 .nodule-category { background: #f44336; }
+
+.nodule-body {
+  margin-bottom: 8px;
+}
+
+.nodule-info {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.nodule-info .label {
+  color: #666;
+}
+
+.nodule-info .value {
+  color: #333;
+  font-weight: 500;
+}
+
+.nodule-scores {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.nodule-scores .score {
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  border: 1px solid #e0e0e0;
+}
+
+.nodule-scores .score.total {
+  background: #333;
+  color: white;
+  border-color: #333;
+  font-weight: 600;
+}
+
+.nodule-recommendation {
+  font-size: 12px;
+  color: #666;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Impression */
+.impression,
+.overall-recommendation {
+  font-size: 13px;
+  padding: 8px 12px;
+  background: #e3f2fd;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.overall-recommendation {
+  background: #fff3e0;
+}
+
+/* 操作按鈕 */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.action-buttons .btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 12px;
+}
+
+/* 錯誤訊息 */
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.error-message.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* 載入中 */
+.loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #2196F3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 設定按鈕 */
+.btn-settings {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.btn-settings:hover {
+  opacity: 1;
+}
+
+/* 隱藏 */
+.hidden {
+  display: none !important;
+}
