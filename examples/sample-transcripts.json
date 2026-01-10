@@ -1,0 +1,372 @@
+{
+  "description": "範例口述文字與預期輸出 - 完整測試案例集",
+  "version": "2.0.0",
+  "examples": [
+    {
+      "id": 1,
+      "name": "數字快速模式 - 單一結節 TR5",
+      "input": "右上 1.2 2 2 3 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right upper",
+          "size_cm": 1.2,
+          "tirads": { "C": 2, "E": 2, "S": 3, "M": 0, "F": 0, "total": 7, "category": "TR5" }
+        }],
+        "impression": "TR5 nodule at right upper (1.2cm).",
+        "recommendation": "FNA recommended (TR5, ≥1cm)"
+      }
+    },
+    {
+      "id": 2,
+      "name": "數字快速模式 - 單一結節 TR2",
+      "input": "左下 0.6公分 1 1 0 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "left lower",
+          "size_cm": 0.6,
+          "tirads": { "C": 1, "E": 1, "S": 0, "M": 0, "F": 0, "total": 2, "category": "TR2" }
+        }],
+        "impression": "TR2 nodule at left lower (0.6cm).",
+        "recommendation": "No FNA needed (TR2)"
+      }
+    },
+    {
+      "id": 3,
+      "name": "數字快速模式 - 多個結節",
+      "input": "右上 1.2 2 2 3 0 0; 左下 0.8 2 1 0 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [
+          {
+            "id": 1,
+            "location": "right upper",
+            "size_cm": 1.2,
+            "tirads": { "C": 2, "E": 2, "S": 3, "M": 0, "F": 0, "total": 7, "category": "TR5" }
+          },
+          {
+            "id": 2,
+            "location": "left lower",
+            "size_cm": 0.8,
+            "tirads": { "C": 2, "E": 1, "S": 0, "M": 0, "F": 0, "total": 3, "category": "TR3" }
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "name": "自然語言模式 - 中文描述",
+      "input": "右側甲狀腺上極有一個一點二公分的結節，實質性，低回聲，高比寬，邊緣光滑，無鈣化",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right upper",
+          "size_cm": 1.2,
+          "tirads": { "C": 2, "E": 2, "S": 3, "M": 0, "F": 0, "total": 7, "category": "TR5" }
+        }]
+      }
+    },
+    {
+      "id": 5,
+      "name": "自然語言模式 - 英文描述",
+      "input": "Left lower pole, 0.9cm nodule, solid, isoechoic, wider than tall, smooth margin, no calcification",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "left lower",
+          "size_cm": 0.9,
+          "tirads": { "C": 2, "E": 1, "S": 0, "M": 0, "F": 0, "total": 3, "category": "TR3" }
+        }]
+      }
+    },
+    {
+      "id": 6,
+      "name": "峽部結節 - 高分",
+      "input": "峽部 1.5 2 3 0 2 3",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "isthmus",
+          "size_cm": 1.5,
+          "tirads": { "C": 2, "E": 3, "S": 0, "M": 2, "F": 3, "total": 10, "category": "TR5" }
+        }],
+        "recommendation": "FNA recommended (TR5, ≥1cm)"
+      }
+    },
+    {
+      "id": 7,
+      "name": "TR4 邊界結節",
+      "input": "右中 1.0 2 2 0 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right mid",
+          "size_cm": 1.0,
+          "tirads": { "C": 2, "E": 2, "S": 0, "M": 0, "F": 0, "total": 4, "category": "TR4" }
+        }],
+        "recommendation": "No FNA needed (TR4, <1.5cm)"
+      }
+    },
+    {
+      "id": 8,
+      "name": "中文數字輸入",
+      "input": "左上 一點五 2 2 0 0 3",
+      "mode": "numeric",
+      "note": "需要先經過 normalizeInput 處理中文數字",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "left upper",
+          "size_cm": 1.5,
+          "tirads": { "C": 2, "E": 2, "S": 0, "M": 0, "F": 3, "total": 7, "category": "TR5" }
+        }]
+      }
+    },
+    {
+      "id": 9,
+      "name": "TR1 囊性結節（良性）",
+      "input": "右下 0.8 0 0 0 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right lower",
+          "size_cm": 0.8,
+          "tirads": { "C": 0, "E": 0, "S": 0, "M": 0, "F": 0, "total": 0, "category": "TR1" }
+        }],
+        "recommendation": "No FNA needed (TR1)"
+      }
+    },
+    {
+      "id": 10,
+      "name": "TR3 邊界（total=3）",
+      "input": "左中 1.8 2 1 0 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "left mid",
+          "size_cm": 1.8,
+          "tirads": { "C": 2, "E": 1, "S": 0, "M": 0, "F": 0, "total": 3, "category": "TR3" }
+        }],
+        "recommendation": "Follow-up recommended (TR3, ≥1.5cm)"
+      }
+    },
+    {
+      "id": 11,
+      "name": "TR5 需要 FNA（大尺寸）",
+      "input": "右上極 2.5 2 2 3 2 3",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right upper",
+          "size_cm": 2.5,
+          "tirads": { "C": 2, "E": 2, "S": 3, "M": 2, "F": 3, "total": 12, "category": "TR5" }
+        }],
+        "recommendation": "FNA recommended (TR5, ≥1cm)"
+      }
+    },
+    {
+      "id": 12,
+      "name": "自然語言 - 微鈣化高風險",
+      "input": "右甲狀腺下極一點三公分結節，實質性，極低回音，高比寬，邊緣不規則，有微鈣化",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right lower",
+          "size_cm": 1.3,
+          "tirads": { "C": 2, "E": 3, "S": 3, "M": 2, "F": 3, "total": 13, "category": "TR5" }
+        }]
+      }
+    },
+    {
+      "id": 13,
+      "name": "自然語言 - 海綿狀良性",
+      "input": "左葉上極零點七公分海綿狀結節",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "left upper",
+          "size_cm": 0.7,
+          "tirads": { "C": 0, "E": 0, "S": 0, "M": 0, "F": 0, "total": 0, "category": "TR1" }
+        }]
+      }
+    },
+    {
+      "id": 14,
+      "name": "自然語言 - 混合性結節 TR2",
+      "input": "峽部零點五公分混合性結節，無回音為主，無鈣化",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "isthmus",
+          "size_cm": 0.5,
+          "tirads": { "C": 1, "E": 0, "S": 0, "M": 0, "F": 0, "total": 1, "category": "TR1" }
+        }],
+        "note": "total=1 沒有標準分類，系統應標記警告"
+      }
+    },
+    {
+      "id": 15,
+      "name": "自然語言 - 甲狀腺外延伸",
+      "input": "Right upper pole 1.8cm solid nodule, very hypoechoic, taller than wide, extrathyroidal extension, microcalcifications",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right upper",
+          "size_cm": 1.8,
+          "tirads": { "C": 2, "E": 3, "S": 3, "M": 3, "F": 3, "total": 14, "category": "TR5" }
+        }]
+      }
+    },
+    {
+      "id": 16,
+      "name": "位置變體 - 右葉上極",
+      "input": "右葉上極 1.0 2 2 0 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right upper",
+          "size_cm": 1.0,
+          "tirads": { "C": 2, "E": 2, "S": 0, "M": 0, "F": 0, "total": 4, "category": "TR4" }
+        }]
+      }
+    },
+    {
+      "id": 17,
+      "name": "位置變體 - 英文縮寫",
+      "input": "RU 1.2 2 2 3 0 0",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right upper",
+          "size_cm": 1.2,
+          "tirads": { "C": 2, "E": 2, "S": 3, "M": 0, "F": 0, "total": 7, "category": "TR5" }
+        }]
+      }
+    },
+    {
+      "id": 18,
+      "name": "三個結節",
+      "input": "右上 1.0 2 2 0 0 0; 左下 0.5 0 0 0 0 0; 峽部 0.8 2 1 0 0 1",
+      "mode": "numeric",
+      "expected": {
+        "nodules": [
+          {
+            "id": 1,
+            "location": "right upper",
+            "size_cm": 1.0,
+            "tirads": { "C": 2, "E": 2, "S": 0, "M": 0, "F": 0, "total": 4, "category": "TR4" }
+          },
+          {
+            "id": 2,
+            "location": "left lower",
+            "size_cm": 0.5,
+            "tirads": { "C": 0, "E": 0, "S": 0, "M": 0, "F": 0, "total": 0, "category": "TR1" }
+          },
+          {
+            "id": 3,
+            "location": "isthmus",
+            "size_cm": 0.8,
+            "tirads": { "C": 2, "E": 1, "S": 0, "M": 0, "F": 1, "total": 4, "category": "TR4" }
+          }
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "name": "自然語言 - 粗鈣化",
+      "input": "左側甲狀腺中段一點零公分結節，實質等回音，有粗鈣化",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "left mid",
+          "size_cm": 1.0,
+          "tirads": { "C": 2, "E": 1, "S": 0, "M": 0, "F": 1, "total": 4, "category": "TR4" }
+        }]
+      }
+    },
+    {
+      "id": 20,
+      "name": "自然語言 - 邊緣鈣化",
+      "input": "右下極一點二公分混合性結節，等回音，有環狀鈣化",
+      "mode": "natural",
+      "expected": {
+        "nodules": [{
+          "id": 1,
+          "location": "right lower",
+          "size_cm": 1.2,
+          "tirads": { "C": 1, "E": 1, "S": 0, "M": 0, "F": 2, "total": 4, "category": "TR4" }
+        }]
+      }
+    }
+  ],
+  "test_cases": {
+    "valid_scores": {
+      "C": [0, 1, 2],
+      "E": [0, 1, 2, 3],
+      "S": [0, 3],
+      "M": [0, 2, 3],
+      "F": [0, 1, 2, 3]
+    },
+    "category_boundaries": {
+      "TR1": { "total": 0, "example": "0+0+0+0+0=0" },
+      "TR2": { "total": 2, "example": "1+1+0+0+0=2" },
+      "TR3": { "total": 3, "example": "2+1+0+0+0=3" },
+      "TR4": { "total_range": [4, 6], "example": "2+2+0+0+0=4 to 2+1+3+0+0=6" },
+      "TR5": { "total_min": 7, "example": "2+2+3+0+0=7" }
+    },
+    "fna_thresholds": {
+      "TR1": { "fna": "never", "follow": "never" },
+      "TR2": { "fna": "never", "follow": "never" },
+      "TR3": { "fna": "≥2.5cm", "follow": "≥1.5cm" },
+      "TR4": { "fna": "≥1.5cm", "follow": "≥1.0cm" },
+      "TR5": { "fna": "≥1.0cm", "follow": "≥0.5cm" }
+    },
+    "invalid_inputs": [
+      { "input": "右上 1.2 2 2 4 0 0", "error": "Invalid Shape score: 4. Must be 0 or 3." },
+      { "input": "右上 1.2 2 2 1 0 0", "error": "Invalid Shape score: 1. Must be 0 or 3." },
+      { "input": "右上 1.2 2 2 2 0 0", "error": "Invalid Shape score: 2. Must be 0 or 3." },
+      { "input": "右上 1.2 2 2 3 1 0", "error": "Invalid Margin score: 1. Must be 0, 2, or 3." },
+      { "input": "右上 1.2 3 2 3 0 0", "error": "Invalid Composition score: 3. Must be 0, 1, or 2." },
+      { "input": "右上 1.2 2 4 3 0 0", "error": "Invalid Echogenicity score: 4. Must be 0, 1, 2, or 3." },
+      { "input": "右上 1.2 2 2 3 0 4", "error": "Invalid Echogenic Foci score: 4. Must be 0, 1, 2, or 3." }
+    ],
+    "auto_correction_cases": [
+      {
+        "input": { "C": 3, "E": 2, "S": 1, "M": 1, "F": 0 },
+        "expected_corrected": { "C": 2, "E": 2, "S": 0, "M": 0, "F": 0 },
+        "note": "C:3→2, S:1→0, M:1→0"
+      },
+      {
+        "input": { "C": 2, "E": 2, "S": 2, "M": 2, "F": 3 },
+        "expected_corrected": { "C": 2, "E": 2, "S": 0, "M": 2, "F": 3 },
+        "note": "S:2→0"
+      }
+    ]
+  },
+  "location_aliases": {
+    "right_upper": ["右上", "右上極", "右側上極", "右葉上極", "RU", "right upper", "right upper pole"],
+    "right_mid": ["右中", "右中段", "右葉中段", "RM", "right mid", "right middle"],
+    "right_lower": ["右下", "右下極", "右側下極", "右葉下極", "RL", "right lower", "right lower pole"],
+    "left_upper": ["左上", "左上極", "左側上極", "左葉上極", "LU", "left upper", "left upper pole"],
+    "left_mid": ["左中", "左中段", "左葉中段", "LM", "left mid", "left middle"],
+    "left_lower": ["左下", "左下極", "左側下極", "左葉下極", "LL", "left lower", "left lower pole"],
+    "isthmus": ["峽部", "峽", "IS", "isthmus"]
+  }
+}

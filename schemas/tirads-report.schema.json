@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ACR TI-RADS 2017 Report",
+  "description": "甲狀腺超音波結節評估報告 - ACR TI-RADS 2017 標準",
+  "type": "object",
+  "properties": {
+    "patient_id": {
+      "type": "string",
+      "description": "病患 ID（選填）"
+    },
+    "exam_date": {
+      "type": "string",
+      "format": "date",
+      "description": "檢查日期"
+    },
+    "nodules": {
+      "type": "array",
+      "description": "結節列表",
+      "items": {
+        "$ref": "#/definitions/nodule"
+      }
+    },
+    "impression": {
+      "type": "string",
+      "description": "總結印象"
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "建議處置"
+    }
+  },
+  "required": ["nodules"],
+  "definitions": {
+    "nodule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "結節編號"
+        },
+        "location": {
+          "type": "string",
+          "enum": ["right upper", "right mid", "right lower", "left upper", "left mid", "left lower", "isthmus"],
+          "description": "位置"
+        },
+        "size_cm": {
+          "type": "number",
+          "minimum": 0,
+          "description": "最大徑（公分）"
+        },
+        "tirads": {
+          "$ref": "#/definitions/tirads_score"
+        }
+      },
+      "required": ["location", "size_cm", "tirads"]
+    },
+    "tirads_score": {
+      "type": "object",
+      "description": "ACR TI-RADS 五項計分",
+      "properties": {
+        "C": {
+          "type": "integer",
+          "enum": [0, 1, 2],
+          "description": "Composition: 0=囊性/海綿狀, 1=混合, 2=實質"
+        },
+        "E": {
+          "type": "integer",
+          "enum": [0, 1, 2, 3],
+          "description": "Echogenicity: 0=無回音, 1=等/高回音, 2=低回音, 3=極低回音"
+        },
+        "S": {
+          "type": "integer",
+          "enum": [0, 3],
+          "description": "Shape: 0=寬>高, 3=高>寬"
+        },
+        "M": {
+          "type": "integer",
+          "enum": [0, 2, 3],
+          "description": "Margin: 0=光滑/模糊, 2=分葉/不規則, 3=甲狀腺外延伸"
+        },
+        "F": {
+          "type": "integer",
+          "enum": [0, 1, 2, 3],
+          "description": "Echogenic Foci: 0=無, 1=粗鈣化, 2=邊緣鈣化, 3=點狀鈣化"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 14,
+          "description": "總分"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["TR1", "TR2", "TR3", "TR4", "TR5"],
+          "description": "TI-RADS 分類"
+        }
+      },
+      "required": ["C", "E", "S", "M", "F", "total", "category"]
+    }
+  }
+}

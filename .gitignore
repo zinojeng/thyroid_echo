@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+._*
+
+# Claude local files
+.claude/ralph-loop.local.md
+.claude/settings.local.json
+
+# Environment
+.env
+.env.local

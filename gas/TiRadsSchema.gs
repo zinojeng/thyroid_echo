@@ -1,0 +1,341 @@
+/**
+ * ACR TI-RADS 2017 計分邏輯
+ * 定義五項評分標準與分類規則
+ */
+
+const TIRADS_SCHEMA = {
+  // Composition (成分)
+  composition: {
+    code: 'C',
+    options: {
+      0: { label: 'cystic', labelZh: '囊性/海綿狀', description: 'Cystic or almost completely cystic / Spongiform' },
+      1: { label: 'mixed', labelZh: '混合', description: 'Mixed cystic and solid' },
+      2: { label: 'solid', labelZh: '實質', description: 'Solid or almost completely solid' }
+    }
+  },
+  
+  // Echogenicity (回音性)
+  echogenicity: {
+    code: 'E',
+    options: {
+      0: { label: 'anechoic', labelZh: '無回音', description: 'Anechoic' },
+      1: { label: 'hyperechoic', labelZh: '等/高回音', description: 'Hyperechoic or isoechoic' },
+      2: { label: 'hypoechoic', labelZh: '低回音', description: 'Hypoechoic' },
+      3: { label: 'very_hypoechoic', labelZh: '極低回音', description: 'Very hypoechoic' }
+    }
+  },
+  
+  // Shape (形狀)
+  shape: {
+    code: 'S',
+    options: {
+      0: { label: 'wider_than_tall', labelZh: '寬>高', description: 'Wider-than-tall' },
+      3: { label: 'taller_than_wide', labelZh: '高>寬', description: 'Taller-than-wide' }
+    }
+  },
+  
+  // Margin (邊緣)
+  margin: {
+    code: 'M',
+    options: {
+      0: { label: 'smooth', labelZh: '光滑/模糊', description: 'Smooth or ill-defined' },
+      2: { label: 'irregular', labelZh: '分葉/不規則', description: 'Lobulated or irregular' },
+      3: { label: 'extrathyroidal', labelZh: '甲狀腺外延伸', description: 'Extra-thyroidal extension' }
+    }
+  },
+  
+  // Echogenic Foci (回音點)
+  echogenicFoci: {
+    code: 'F',
+    options: {
+      0: { label: 'none', labelZh: '無', description: 'None or large comet-tail artifacts' },
+      1: { label: 'macrocalcification', labelZh: '粗鈣化', description: 'Macrocalcifications' },
+      2: { label: 'peripheral', labelZh: '邊緣鈣化', description: 'Peripheral (rim) calcifications' },
+      3: { label: 'punctate', labelZh: '點狀鈣化', description: 'Punctate echogenic foci' }
+    }
+  }
+};
+
+// TI-RADS 分類對照表
+const TIRADS_CATEGORIES = {
+  TR1: { minPoints: 0, maxPoints: 0, name: 'Benign', recommendation: 'No FNA' },
+  TR2: { minPoints: 2, maxPoints: 2, name: 'Not Suspicious', recommendation: 'No FNA' },
+  TR3: { minPoints: 3, maxPoints: 3, name: 'Mildly Suspicious', recommendation: 'FNA if ≥2.5cm, follow if ≥1.5cm' },
+  TR4: { minPoints: 4, maxPoints: 6, name: 'Moderately Suspicious', recommendation: 'FNA if ≥1.5cm, follow if ≥1cm' },
+  TR5: { minPoints: 7, maxPoints: 14, name: 'Highly Suspicious', recommendation: 'FNA if ≥1cm, follow if ≥0.5cm' }
+};
+
+// 位置對照表
+const LOCATION_MAP = {
+  '右上': 'right upper',
+  '右中': 'right mid', 
+  '右下': 'right lower',
+  '左上': 'left upper',
+  '左中': 'left mid',
+  '左下': 'left lower',
+  '峽部': 'isthmus',
+  'RU': 'right upper',
+  'RM': 'right mid',
+  'RL': 'right lower',
+  'LU': 'left upper',
+  'LM': 'left mid',
+  'LL': 'left lower',
+  'IS': 'isthmus'
+};
+
+/**
+ * 計算 TI-RADS 總分
+ * @param {number} c - Composition score
+ * @param {number} e - Echogenicity score
+ * @param {number} s - Shape score
+ * @param {number} m - Margin score
+ * @param {number} f - Echogenic Foci score
+ * @returns {number} Total score
+ */
+function calculateTotalScore(c, e, s, m, f) {
+  return c + e + s + m + f;
+}
+
+/**
+ * 根據總分判定 TI-RADS 分類
+ * @param {number} totalScore - 總分
+ * @returns {string} TI-RADS category (TR1-TR5)
+ */
+function getTiRadsCategory(totalScore) {
+  if (totalScore === 0) return 'TR1';
+  if (totalScore === 2) return 'TR2';
+  if (totalScore === 3) return 'TR3';
+  if (totalScore >= 4 && totalScore <= 6) return 'TR4';
+  if (totalScore >= 7) return 'TR5';
+  return 'TR1'; // 預設
+}
+
+/**
+ * 根據 TI-RADS 分類和大小給出建議
+ * @param {string} category - TI-RADS category
+ * @param {number} sizeCm - Nodule size in cm
+ * @returns {string} Recommendation
+ */
+function getRecommendation(category, sizeCm) {
+  const thresholds = {
+    TR1: { fna: Infinity, follow: Infinity },
+    TR2: { fna: Infinity, follow: Infinity },
+    TR3: { fna: 2.5, follow: 1.5 },
+    TR4: { fna: 1.5, follow: 1.0 },
+    TR5: { fna: 1.0, follow: 0.5 }
+  };
+  
+  const t = thresholds[category];
+  if (!t) return 'Unable to determine recommendation';
+  
+  if (sizeCm >= t.fna) {
+    return `FNA recommended (${category}, ≥${t.fna}cm)`;
+  } else if (sizeCm >= t.follow) {
+    return `Follow-up recommended (${category}, ≥${t.follow}cm)`;
+  } else {
+    return `No FNA needed (${category}, <${t.follow}cm)`;
+  }
+}
+
+/**
+ * 驗證 TI-RADS 分數是否有效
+ * @param {Object} scores - {C, E, S, M, F}
+ * @returns {Object} {valid: boolean, errors: string[], warnings: string[]}
+ */
+function validateTiRadsScores(scores) {
+  const errors = [];
+  const warnings = [];
+
+  // 確保所有分數都是數字
+  const c = Number(scores.C);
+  const e = Number(scores.E);
+  const s = Number(scores.S);
+  const m = Number(scores.M);
+  const f = Number(scores.F);
+
+  if (isNaN(c) || ![0, 1, 2].includes(c)) {
+    errors.push(`Invalid Composition score: ${scores.C}. Must be 0, 1, or 2.`);
+  }
+  if (isNaN(e) || ![0, 1, 2, 3].includes(e)) {
+    errors.push(`Invalid Echogenicity score: ${scores.E}. Must be 0, 1, 2, or 3.`);
+  }
+  if (isNaN(s) || ![0, 3].includes(s)) {
+    errors.push(`Invalid Shape score: ${scores.S}. Must be 0 or 3. (Note: 1 and 2 are NOT valid Shape scores!)`);
+  }
+  if (isNaN(m) || ![0, 2, 3].includes(m)) {
+    errors.push(`Invalid Margin score: ${scores.M}. Must be 0, 2, or 3. (Note: 1 is NOT a valid Margin score!)`);
+  }
+  if (isNaN(f) || ![0, 1, 2, 3].includes(f)) {
+    errors.push(`Invalid Echogenic Foci score: ${scores.F}. Must be 0, 1, 2, or 3.`);
+  }
+
+  // 檢查不可能的組合
+  const total = c + e + s + m + f;
+  if (total === 1) {
+    warnings.push(`Total score of 1 is unusual (no standard TI-RADS category). Check if scores are correct.`);
+  }
+
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+/**
+ * 自動修正常見的 LLM 輸出錯誤
+ * @param {Object} scores - {C, E, S, M, F}
+ * @returns {Object} {corrected: {C, E, S, M, F}, corrections: string[]}
+ */
+function sanitizeTiRadsScores(scores) {
+  const corrections = [];
+  const corrected = {
+    C: Number(scores.C),
+    E: Number(scores.E),
+    S: Number(scores.S),
+    M: Number(scores.M),
+    F: Number(scores.F)
+  };
+
+  // 修正 Composition (C): 只能是 0, 1, 2
+  if (corrected.C === 3) {
+    corrections.push(`Composition corrected from 3 to 2 (maximum valid value)`);
+    corrected.C = 2;
+  } else if (corrected.C < 0 || corrected.C > 2) {
+    corrections.push(`Composition corrected from ${corrected.C} to 2 (defaulting to solid)`);
+    corrected.C = 2;
+  }
+
+  // 修正 Echogenicity (E): 只能是 0, 1, 2, 3
+  if (corrected.E < 0) {
+    corrections.push(`Echogenicity corrected from ${corrected.E} to 0`);
+    corrected.E = 0;
+  } else if (corrected.E > 3) {
+    corrections.push(`Echogenicity corrected from ${corrected.E} to 3`);
+    corrected.E = 3;
+  }
+
+  // 修正 Shape (S): 只能是 0 或 3
+  if (corrected.S === 1 || corrected.S === 2) {
+    // LLM 常見錯誤：將 Shape 設為 1 或 2
+    // 如果是 1 或 2，可能是想表示「有點高」，修正為 3
+    corrections.push(`Shape corrected from ${corrected.S} to 0 (Shape can only be 0 or 3)`);
+    corrected.S = 0; // 保守起見，預設為 0（寬大於高）
+  } else if (corrected.S < 0) {
+    corrections.push(`Shape corrected from ${corrected.S} to 0`);
+    corrected.S = 0;
+  } else if (corrected.S > 3) {
+    corrections.push(`Shape corrected from ${corrected.S} to 3`);
+    corrected.S = 3;
+  }
+
+  // 修正 Margin (M): 只能是 0, 2, 3
+  if (corrected.M === 1) {
+    // LLM 常見錯誤：將 Margin 設為 1
+    corrections.push(`Margin corrected from 1 to 0 (Margin can only be 0, 2, or 3)`);
+    corrected.M = 0; // 保守起見，1 → 0
+  } else if (corrected.M < 0) {
+    corrections.push(`Margin corrected from ${corrected.M} to 0`);
+    corrected.M = 0;
+  } else if (corrected.M > 3) {
+    corrections.push(`Margin corrected from ${corrected.M} to 3`);
+    corrected.M = 3;
+  }
+
+  // 修正 Echogenic Foci (F): 只能是 0, 1, 2, 3
+  if (corrected.F < 0) {
+    corrections.push(`Echogenic Foci corrected from ${corrected.F} to 0`);
+    corrected.F = 0;
+  } else if (corrected.F > 3) {
+    corrections.push(`Echogenic Foci corrected from ${corrected.F} to 3`);
+    corrected.F = 3;
+  }
+
+  // 處理 NaN
+  if (isNaN(corrected.C)) { corrected.C = 2; corrections.push('Composition was NaN, defaulted to 2'); }
+  if (isNaN(corrected.E)) { corrected.E = 1; corrections.push('Echogenicity was NaN, defaulted to 1'); }
+  if (isNaN(corrected.S)) { corrected.S = 0; corrections.push('Shape was NaN, defaulted to 0'); }
+  if (isNaN(corrected.M)) { corrected.M = 0; corrections.push('Margin was NaN, defaulted to 0'); }
+  if (isNaN(corrected.F)) { corrected.F = 0; corrections.push('Echogenic Foci was NaN, defaulted to 0'); }
+
+  return { corrected, corrections };
+}
+
+/**
+ * 驗證並自動修正 TI-RADS 分數
+ * @param {Object} scores - {C, E, S, M, F}
+ * @param {boolean} autoCorrect - 是否自動修正錯誤（預設 true）
+ * @returns {Object} {valid: boolean, scores: {C, E, S, M, F}, errors: string[], corrections: string[]}
+ */
+function validateAndCorrectScores(scores, autoCorrect = true) {
+  // 先驗證
+  const validation = validateTiRadsScores(scores);
+
+  if (validation.valid) {
+    return {
+      valid: true,
+      scores: {
+        C: Number(scores.C),
+        E: Number(scores.E),
+        S: Number(scores.S),
+        M: Number(scores.M),
+        F: Number(scores.F)
+      },
+      errors: [],
+      corrections: [],
+      warnings: validation.warnings || []
+    };
+  }
+
+  // 如果無效且允許自動修正
+  if (autoCorrect) {
+    const { corrected, corrections } = sanitizeTiRadsScores(scores);
+    const revalidation = validateTiRadsScores(corrected);
+
+    return {
+      valid: revalidation.valid,
+      scores: corrected,
+      errors: revalidation.errors,
+      corrections: corrections,
+      warnings: revalidation.warnings || []
+    };
+  }
+
+  // 不自動修正，直接返回錯誤
+  return {
+    valid: false,
+    scores: scores,
+    errors: validation.errors,
+    corrections: [],
+    warnings: validation.warnings || []
+  };
+}
+
+/**
+ * 建立完整的 TI-RADS 評估結果
+ * @param {Object} params - {location, sizeCm, C, E, S, M, F}
+ * @returns {Object} Complete nodule assessment
+ */
+function createNoduleAssessment(params) {
+  const { location, sizeCm, C, E, S, M, F } = params;
+  
+  // 驗證分數
+  const validation = validateTiRadsScores({ C, E, S, M, F });
+  if (!validation.valid) {
+    throw new Error(validation.errors.join('; '));
+  }
+  
+  const total = calculateTotalScore(C, E, S, M, F);
+  const category = getTiRadsCategory(total);
+  const recommendation = getRecommendation(category, sizeCm);
+  
+  // 標準化位置
+  const normalizedLocation = LOCATION_MAP[location] || location;
+  
+  return {
+    location: normalizedLocation,
+    size_cm: sizeCm,
+    tirads: {
+      C, E, S, M, F,
+      total,
+      category
+    },
+    recommendation
+  };
+}
