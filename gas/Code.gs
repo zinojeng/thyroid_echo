@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -15,6 +15,7 @@ const APP_VERSION = '1.3.2';
 // 1.3.0 - 新增混合模式 (Mixed Mode)，WebApp 顯示葉描述
 // 1.3.1 - 修正葉描述分離邏輯，新增「血流過多」術語
 // 1.3.2 - 改進 Impression 格式：Lobe(volume+echo/vascular), Nodule(max diameter+TI-RADS)
+// 1.3.3 - 支援葉的兩維度尺寸解析 (只有長×寬時顯示尺寸不計算體積)
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面

@@ -1366,14 +1366,24 @@ function parseComplexSingleLobe(input) {
   const result = { type };
 
   // 提取尺寸 (支援多種格式: 1 × 2 × 3, 1x2x3, 1*2*3)
-  const dimMatch = input.match(/(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)/i);
-  if (dimMatch) {
+  const dim3Match = input.match(/(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)/i);
+  if (dim3Match) {
     result.dimensions = {
-      length: parseFloat(dimMatch[1]),
-      width: parseFloat(dimMatch[2]),
-      height: parseFloat(dimMatch[3])
+      length: parseFloat(dim3Match[1]),
+      width: parseFloat(dim3Match[2]),
+      height: parseFloat(dim3Match[3])
     };
     result.volume_ml = Math.round(0.524 * result.dimensions.length * result.dimensions.width * result.dimensions.height * 100) / 100;
+  } else {
+    // 嘗試匹配兩維度 (1 × 2, 1x2)
+    const dim2Match = input.match(/(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)/i);
+    if (dim2Match) {
+      result.dimensions = {
+        length: parseFloat(dim2Match[1]),
+        width: parseFloat(dim2Match[2])
+      };
+      // 只有兩維度，不計算 volume
+    }
   }
 
   // 提取均質性
