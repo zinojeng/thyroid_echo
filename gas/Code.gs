@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.4.0';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -16,6 +16,8 @@ const APP_VERSION = '1.3.3';
 // 1.3.1 - 修正葉描述分離邏輯，新增「血流過多」術語
 // 1.3.2 - 改進 Impression 格式：Lobe(volume+echo/vascular), Nodule(max diameter+TI-RADS)
 // 1.3.3 - 支援葉的兩維度尺寸解析 (只有長×寬時顯示尺寸不計算體積)
+// 1.4.0 - 修正術語：echogenicity(明暗) vs echotexture(均勻度)；
+//         更新 FNA 建議依據 ACR TI-RADS 2017 White Paper 標準
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -330,12 +332,14 @@ function formatLobeImpression(lobe, label) {
     }
   }
 
-  // Echotexture (homogeneity + echogenicity)
-  const echoTexture = [];
-  if (lobe.homogeneity) echoTexture.push(lobe.homogeneity);
-  if (lobe.echogenicity) echoTexture.push(lobe.echogenicity);
-  if (echoTexture.length > 0) {
-    parts.push(echoTexture.join(' ') + ' echotexture;');
+  // Echogenicity (明暗度: anechoic/hyperechoic/isoechoic/hypoechoic)
+  if (lobe.echogenicity) {
+    parts.push(`echogenicity: ${lobe.echogenicity};`);
+  }
+
+  // Echotexture (均勻度: homogeneous/heterogeneous)
+  if (lobe.homogeneity) {
+    parts.push(`echotexture: ${lobe.homogeneity};`);
   }
 
   // Vascularity

@@ -111,30 +111,68 @@ function getTiRadsCategory(totalScore) {
 }
 
 /**
+ * ACR TI-RADS 風險等級描述
+ */
+const TIRADS_SUSPICION_LEVELS = {
+  TR1: 'Benign',
+  TR2: 'Not Suspicious',
+  TR3: 'Mildly Suspicious',
+  TR4: 'Moderately Suspicious',
+  TR5: 'Highly Suspicious'
+};
+
+/**
  * 根據 TI-RADS 分類和大小給出建議
+ * 依據 ACR TI-RADS 2017 White Paper 標準
  * @param {string} category - TI-RADS category
- * @param {number} sizeCm - Nodule size in cm
+ * @param {number} sizeCm - Nodule size in cm (max diameter)
  * @returns {string} Recommendation
  */
 function getRecommendation(category, sizeCm) {
+  // ACR TI-RADS 2017 尺寸閾值
   const thresholds = {
-    TR1: { fna: Infinity, follow: Infinity },
-    TR2: { fna: Infinity, follow: Infinity },
-    TR3: { fna: 2.5, follow: 1.5 },
-    TR4: { fna: 1.5, follow: 1.0 },
-    TR5: { fna: 1.0, follow: 0.5 }
+    TR1: { fna: Infinity, follow: Infinity, suspicion: 'Benign' },
+    TR2: { fna: Infinity, follow: Infinity, suspicion: 'Not Suspicious' },
+    TR3: { fna: 2.5, follow: 1.5, suspicion: 'Mildly Suspicious' },
+    TR4: { fna: 1.5, follow: 1.0, suspicion: 'Moderately Suspicious' },
+    TR5: { fna: 1.0, follow: 0.5, suspicion: 'Highly Suspicious' }
   };
-  
+
   const t = thresholds[category];
   if (!t) return 'Unable to determine recommendation';
-  
-  if (sizeCm >= t.fna) {
-    return `FNA recommended (${category}, ≥${t.fna}cm)`;
-  } else if (sizeCm >= t.follow) {
-    return `Follow-up recommended (${category}, ≥${t.follow}cm)`;
-  } else {
-    return `No FNA needed (${category}, <${t.follow}cm)`;
+
+  // 沒有尺寸時，只返回風險等級
+  if (!sizeCm || sizeCm <= 0) {
+    return `${category} (${t.suspicion}) - Size needed for FNA recommendation`;
   }
+
+  // TR1/TR2：不需要 FNA
+  if (category === 'TR1' || category === 'TR2') {
+    return `No FNA (${category}: ${t.suspicion})`;
+  }
+
+  // TR5 特殊情況：5-9mm 可能需要考慮微小乳頭癌
+  if (category === 'TR5' && sizeCm >= 0.5 && sizeCm < 1.0) {
+    return `Follow-up recommended; consider FNA for papillary microcarcinoma if concerning features (${category}, 0.5-0.9cm)`;
+  }
+
+  // 標準建議
+  if (sizeCm >= t.fna) {
+    return `FNA recommended (${category}: ${t.suspicion}, ≥${t.fna}cm)`;
+  } else if (sizeCm >= t.follow) {
+    return `Follow-up ultrasound recommended (${category}: ${t.suspicion}, ${t.follow}-${t.fna}cm)`;
+  } else {
+    return `No FNA or follow-up needed (${category}: ${t.suspicion}, <${t.follow}cm)`;
+  }
+}
+
+/**
+ * 取得 TI-RADS 風險等級描述
+ * @param {string} category - TI-RADS category
+ * @returns {string} Suspicion level description
+ */
+function getSuspicionLevel(category) {
+  return TIRADS_SUSPICION_LEVELS[category] || 'Unknown';
 }
 
 /**
