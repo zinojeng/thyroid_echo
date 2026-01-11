@@ -278,11 +278,24 @@ function generateMixedImpression(result) {
   // 結節印象 (max diameter + TI-RADS)
   if (result.nodules && result.nodules.length > 0) {
     const noduleLines = result.nodules.map(n => {
-      const maxDiameter = n.size_cm || (n.dimensions ? Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height || 0) : 0);
       const location = n.location || 'unknown';
       const locationText = location.includes('right') ? 'Right lobe' : location.includes('left') ? 'Left lobe' : location.includes('isthmus') ? 'Isthmus' : capitalizeFirst(location);
       const echoDesc = n.tirads?.echogenicity ? n.tirads.echogenicity.toLowerCase() + ' ' : '';
-      return `   - ${locationText}: ${echoDesc}nodule, max diameter ${maxDiameter} cm, ACR TI-RADS ${n.tirads?.category || 'N/A'}.`;
+
+      // 只有三個維度或有明確 size_cm 時才顯示 max diameter
+      let sizeText = '';
+      if (n.size_cm) {
+        sizeText = `, max diameter ${n.size_cm} cm`;
+      } else if (n.dimensions && n.dimensions.length && n.dimensions.width && n.dimensions.height) {
+        const maxDiameter = Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height);
+        sizeText = `, max diameter ${maxDiameter} cm`;
+      } else if (n.dimensions) {
+        // 只有兩個維度，顯示尺寸
+        const d = n.dimensions;
+        sizeText = d.height ? `, ${d.length} x ${d.width} x ${d.height} cm` : `, ${d.length} x ${d.width} cm`;
+      }
+
+      return `   - ${locationText}: ${echoDesc}nodule${sizeText}, ACR TI-RADS ${n.tirads?.category || 'N/A'}.`;
     });
     lines.push(`${itemNum}) Nodules:`);
     lines.push(...noduleLines);
@@ -300,12 +313,20 @@ function generateMixedImpression(result) {
 function formatLobeImpression(lobe, label) {
   const parts = [label + ':'];
 
-  // Volume
+  // Volume - 只有三個維度都有時才計算
   if (lobe.volume_ml) {
     parts.push(`volume ${lobe.volume_ml} mL;`);
-  } else if (lobe.dimensions) {
-    const vol = Math.round(0.524 * lobe.dimensions.length * lobe.dimensions.width * (lobe.dimensions.height || 1) * 100) / 100;
+  } else if (lobe.dimensions && lobe.dimensions.length && lobe.dimensions.width && lobe.dimensions.height) {
+    const vol = Math.round(0.524 * lobe.dimensions.length * lobe.dimensions.width * lobe.dimensions.height * 100) / 100;
     parts.push(`volume ${vol} mL;`);
+  } else if (lobe.dimensions) {
+    // 只有兩個維度，顯示尺寸但不計算體積
+    const d = lobe.dimensions;
+    if (d.height) {
+      parts.push(`${d.length} x ${d.width} x ${d.height} cm;`);
+    } else {
+      parts.push(`${d.length} x ${d.width} cm;`);
+    }
   }
 
   // Echotexture (homogeneity + echogenicity)
