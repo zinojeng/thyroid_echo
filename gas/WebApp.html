@@ -291,7 +291,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Thyroid Echo Report <span style="font-size: 12px; opacity: 0.7;">v1.6.2</span></h1>
+    <h1>Thyroid Echo Report <span style="font-size: 12px; opacity: 0.7;">v1.6.3</span></h1>
 
     <!-- Settings Card -->
     <div class="card settings-card">
@@ -589,13 +589,6 @@
         });
       }
 
-      // 顯示診斷 (Diagnosis)
-      if (result.diagnoses && result.diagnoses.length > 0) {
-        html += `<div class="diagnosis-card" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin: 12px 0;">
-          <strong style="color: #92400e;">Diagnosis:</strong> ${result.diagnoses.join('; ')}
-        </div>`;
-      }
-
       if (result.impression) {
         html += `<div class="impression"><strong>Impression:</strong> ${result.impression}</div>`;
       }
@@ -750,11 +743,6 @@
           text += `  ${t.composition || ''}, ${t.echogenicity || ''}, ${t.shape || ''}, ${t.margin || ''}, ${t.echogenicFoci || ''}\n`;
           text += `  TI-RADS ${t.category || ''} (${t.total ?? ''} points)\n\n`;
         });
-      }
-
-      // 診斷描述
-      if (result.diagnoses && result.diagnoses.length > 0) {
-        text += `=== Diagnosis ===\n${result.diagnoses.join('; ')}\n\n`;
       }
 
       if (result.impression) {

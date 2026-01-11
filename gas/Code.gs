@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.6.2';
+const APP_VERSION = '1.6.3';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -23,7 +23,8 @@ const APP_VERSION = '1.6.2';
 // 1.5.1 - 移除多餘的整體 Recommendation（每個結節已有個別建議）
 // 1.6.0 - 新增甲狀腺疾病診斷識別 (Autoimmune thyroid disease, Hashimoto's, Graves', etc.)
 // 1.6.1 - 擴充甲狀腺疾病診斷字典 (新增 12 種常見疾病)
-// 1.6.2 - 修正 normalizeInput 保留換行符；修正 apostrophe 匹配；葉模式也支援診斷
+// 1.6.2 - 修正換行符號處理、引號字元統一、葉模式診斷解析
+// 1.6.3 - 移除重複診斷顯示，診斷只保留在 Impression 中
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
