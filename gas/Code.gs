@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -22,6 +22,7 @@ const APP_VERSION = '1.6.0';
 // 1.5.0 - Impression 中每個結節顯示個別 FNA 建議 (依 ACR TI-RADS 2017)
 // 1.5.1 - 移除多餘的整體 Recommendation（每個結節已有個別建議）
 // 1.6.0 - 新增甲狀腺疾病診斷識別 (Autoimmune thyroid disease, Hashimoto's, Graves', etc.)
+// 1.6.1 - 擴充甲狀腺疾病診斷字典 (新增 12 種常見疾病)
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面

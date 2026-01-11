@@ -1420,7 +1420,7 @@ function parseComplexSingleLobe(input) {
  * 甲狀腺疾病診斷術語對照
  */
 const THYROID_DIAGNOSIS_TERMS = {
-  // 自體免疫性甲狀腺疾病
+  // ===== 自體免疫性甲狀腺疾病 =====
   '自體免疫性甲狀腺疾病': 'Autoimmune thyroid disease',
   '自體免疫性的甲狀腺疾病': 'Autoimmune thyroid disease',
   '自體免疫甲狀腺炎': 'Autoimmune thyroiditis',
@@ -1428,33 +1428,99 @@ const THYROID_DIAGNOSIS_TERMS = {
   'autoimmune thyroid disease': 'Autoimmune thyroid disease',
   'autoimmune thyroiditis': 'Autoimmune thyroiditis',
 
-  // 橋本氏甲狀腺炎
+  // ===== 橋本氏甲狀腺炎 (Hashimoto's thyroiditis) =====
   '橋本氏甲狀腺炎': "Hashimoto's thyroiditis",
   '橋本甲狀腺炎': "Hashimoto's thyroiditis",
+  '橋本氏': "Hashimoto's thyroiditis",
   '慢性淋巴球性甲狀腺炎': "Hashimoto's thyroiditis",
+  '慢性淋巴細胞性甲狀腺炎': "Hashimoto's thyroiditis",
   "hashimoto's thyroiditis": "Hashimoto's thyroiditis",
   'hashimoto thyroiditis': "Hashimoto's thyroiditis",
+  'hashimoto': "Hashimoto's thyroiditis",
 
-  // 葛瑞夫茲病 / 格雷夫斯病
+  // ===== 葛瑞夫氏病 (Graves' disease) =====
   '葛瑞夫茲病': "Graves' disease",
+  '葛瑞夫氏病': "Graves' disease",
   '格雷夫斯病': "Graves' disease",
+  '毒性彌漫性甲狀腺腫': "Graves' disease",
   '瀰漫性毒性甲狀腺腫': "Graves' disease",
+  '彌漫性毒性甲狀腺腫': "Graves' disease",
   "graves' disease": "Graves' disease",
   'graves disease': "Graves' disease",
+  'graves': "Graves' disease",
 
-  // 甲狀腺腫
+  // ===== 亞急性甲狀腺炎 (Subacute/de Quervain thyroiditis) =====
+  '亞急性甲狀腺炎': 'Subacute (de Quervain) thyroiditis',
+  '德乾甲狀腺炎': 'Subacute (de Quervain) thyroiditis',
+  '疼痛性甲狀腺炎': 'Subacute (de Quervain) thyroiditis',
+  'subacute thyroiditis': 'Subacute (de Quervain) thyroiditis',
+  "de quervain's thyroiditis": 'Subacute (de Quervain) thyroiditis',
+  'de quervain thyroiditis': 'Subacute (de Quervain) thyroiditis',
+
+  // ===== 無痛性/靜默性甲狀腺炎 (Painless/Silent thyroiditis) =====
+  '無痛性甲狀腺炎': 'Painless (silent) thyroiditis',
+  '靜默性甲狀腺炎': 'Painless (silent) thyroiditis',
+  '沉默性甲狀腺炎': 'Painless (silent) thyroiditis',
+  'painless thyroiditis': 'Painless (silent) thyroiditis',
+  'silent thyroiditis': 'Painless (silent) thyroiditis',
+
+  // ===== 產後甲狀腺炎 (Postpartum thyroiditis) =====
+  '產後甲狀腺炎': 'Postpartum thyroiditis',
+  '產後甲狀腺功能異常': 'Postpartum thyroiditis',
+  'postpartum thyroiditis': 'Postpartum thyroiditis',
+
+  // ===== 急性化膿性甲狀腺炎 (Acute suppurative thyroiditis) =====
+  '急性化膿性甲狀腺炎': 'Acute suppurative thyroiditis',
+  '急性甲狀腺炎': 'Acute suppurative thyroiditis',
+  '化膿性甲狀腺炎': 'Acute suppurative thyroiditis',
+  'acute suppurative thyroiditis': 'Acute suppurative thyroiditis',
+  'acute thyroiditis': 'Acute suppurative thyroiditis',
+
+  // ===== 甲狀腺腫 (Goiter) =====
   '甲狀腺腫': 'Goiter',
   '甲狀腺腫大': 'Goiter',
-  '多結節性甲狀腺腫': 'Multinodular goiter',
   'goiter': 'Goiter',
+  'goitre': 'Goiter',
+
+  // ===== 多結節性甲狀腺腫 (Multinodular goiter) =====
+  '多結節性甲狀腺腫': 'Multinodular goiter',
+  '多發性結節性甲狀腺腫': 'Multinodular goiter',
   'multinodular goiter': 'Multinodular goiter',
   'mng': 'Multinodular goiter',
 
-  // 甲狀腺炎
-  '亞急性甲狀腺炎': 'Subacute thyroiditis',
-  '德乾甲狀腺炎': 'De Quervain thyroiditis',
-  'subacute thyroiditis': 'Subacute thyroiditis',
-  "de quervain's thyroiditis": 'De Quervain thyroiditis'
+  // ===== 彌漫性甲狀腺腫 (Diffuse goiter) =====
+  '彌漫性甲狀腺腫': 'Diffuse goiter',
+  '瀰漫性甲狀腺腫': 'Diffuse goiter',
+  '單純性甲狀腺腫': 'Diffuse goiter',
+  'diffuse goiter': 'Diffuse goiter',
+  'simple goiter': 'Diffuse goiter',
+
+  // ===== 原發性甲狀腺淋巴瘤 (Primary thyroid lymphoma) =====
+  '原發性甲狀腺淋巴瘤': 'Primary thyroid lymphoma',
+  '甲狀腺淋巴瘤': 'Primary thyroid lymphoma',
+  'primary thyroid lymphoma': 'Primary thyroid lymphoma',
+  'thyroid lymphoma': 'Primary thyroid lymphoma',
+
+  // ===== 里德爾甲狀腺炎 (Riedel thyroiditis) =====
+  '里德爾甲狀腺炎': 'Riedel thyroiditis',
+  '里德爾硬化性甲狀腺炎': 'Riedel thyroiditis',
+  '纖維性甲狀腺炎': 'Riedel thyroiditis',
+  'riedel thyroiditis': 'Riedel thyroiditis',
+  "riedel's thyroiditis": 'Riedel thyroiditis',
+
+  // ===== 甲狀腺膿瘍 (Thyroid abscess) =====
+  '甲狀腺膿瘍': 'Thyroid abscess',
+  '甲狀腺膿腫': 'Thyroid abscess',
+  'thyroid abscess': 'Thyroid abscess',
+
+  // ===== 藥物誘發性甲狀腺炎 (Drug-induced thyroiditis) =====
+  '藥物誘發性甲狀腺炎': 'Drug-induced thyroiditis',
+  '藥物性甲狀腺炎': 'Drug-induced thyroiditis',
+  '藥物誘發性甲狀腺功能異常': 'Drug-induced thyroid dysfunction',
+  '藥物性甲狀腺功能異常': 'Drug-induced thyroid dysfunction',
+  'drug-induced thyroiditis': 'Drug-induced thyroiditis',
+  'drug induced thyroiditis': 'Drug-induced thyroiditis',
+  'drug-induced thyroid dysfunction': 'Drug-induced thyroid dysfunction'
 };
 
 /**
