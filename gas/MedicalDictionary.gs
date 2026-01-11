@@ -755,8 +755,20 @@ function detectInputMode(input) {
 function parseTiradsCodeInput(input) {
   const normalized = normalizeInput(input);
 
-  // 支援多個結節（以分號、換行分隔）
-  const parts = normalized.split(/[;；\n]/).map(s => s.trim()).filter(s => s);
+  // 支援多個結節（以分號、換行、或 TIRADS 代碼結尾後的新結節開頭分隔）
+  // 先用換行和分號分隔
+  let parts = normalized.split(/[;；\r\n]+/).map(s => s.trim()).filter(s => s);
+
+  // 如果只有一個部分，嘗試用 TIRADS 模式分割（每個 TIRADS XXXXX 後面開始新結節）
+  if (parts.length === 1) {
+    // 匹配 "TIRADS XXXXX" 後面跟著新的位置描述（右/左/峽）
+    const multiPattern = /(TIRADS\s*\d{5})\s*(?=[右左峽Rr])/gi;
+    const splitText = normalized.replace(multiPattern, '$1|||');
+    if (splitText.includes('|||')) {
+      parts = splitText.split('|||').map(s => s.trim()).filter(s => s);
+    }
+  }
+
   const nodules = [];
 
   for (const part of parts) {
