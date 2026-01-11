@@ -1,9 +1,18 @@
 /**
  * Thyroid Echo Report API
  * 甲狀腺超音波報告結構化 API
- * 
+ *
  * 主要端點：doPost - 接收口述文字，回傳結構化 TI-RADS 報告
  */
+
+// 版本號碼 - 每次更新時遞增
+const APP_VERSION = '1.3.0';
+
+// 版本歷史：
+// 1.0.0 - 初始版本，支援數字模式和自然語言模式
+// 1.1.0 - 新增 TIRADS 代碼模式
+// 1.2.0 - 新增葉描述模式 (Lobe Mode)
+// 1.3.0 - 新增混合模式 (Mixed Mode)，WebApp 顯示葉描述
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -14,7 +23,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({
       status: 'ok',
       message: 'Thyroid Echo Report API is running',
-      version: '1.1.0',
+      version: APP_VERSION,
       endpoints: {
         POST: '/exec - 結構化甲狀腺報告',
         GET: '/exec - Web App 頁面',
@@ -140,7 +149,7 @@ function processReport(input, mode, options) {
   result.metadata = {
     mode: detectedMode,
     processed_at: new Date().toISOString(),
-    api_version: '1.2.0'
+    api_version: APP_VERSION
   };
 
   return result;
