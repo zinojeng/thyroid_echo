@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.2';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -14,6 +14,7 @@ const APP_VERSION = '1.3.1';
 // 1.2.0 - 新增葉描述模式 (Lobe Mode)
 // 1.3.0 - 新增混合模式 (Mixed Mode)，WebApp 顯示葉描述
 // 1.3.1 - 修正葉描述分離邏輯，新增「血流過多」術語
+// 1.3.2 - 改進 Impression 格式：Lobe(volume+echo/vascular), Nodule(max diameter+TI-RADS)
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -255,60 +256,131 @@ function processMixedMode(input, options) {
  * @returns {string} 印象描述
  */
 function generateMixedImpression(result) {
-  const parts = [];
+  const lines = [];
+  let itemNum = 1;
 
-  // 葉描述印象
+  // 葉描述印象 (volume + echo/vascular)
   if (result.lobes) {
-    parts.push(generateLobeImpression(result.lobes));
+    if (result.lobes.rightLobe) {
+      lines.push(`${itemNum}) ${formatLobeImpression(result.lobes.rightLobe, 'Right lobe')}`);
+      itemNum++;
+    }
+    if (result.lobes.leftLobe) {
+      lines.push(`${itemNum}) ${formatLobeImpression(result.lobes.leftLobe, 'Left lobe')}`);
+      itemNum++;
+    }
+    if (result.lobes.isthmus) {
+      lines.push(`${itemNum}) ${formatIsthmusImpression(result.lobes.isthmus)}`);
+      itemNum++;
+    }
   }
 
-  // 結節印象
+  // 結節印象 (max diameter + TI-RADS)
   if (result.nodules && result.nodules.length > 0) {
-    const noduleImpressions = result.nodules.map(n => {
-      const size = n.size_cm || (n.dimensions ? Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height || 0) : 0);
-      return `${n.tirads.category} nodule at ${n.location} (${size}cm)`;
+    const noduleLines = result.nodules.map(n => {
+      const maxDiameter = n.size_cm || (n.dimensions ? Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height || 0) : 0);
+      const location = n.location || 'unknown';
+      const locationText = location.includes('right') ? 'Right lobe' : location.includes('left') ? 'Left lobe' : location.includes('isthmus') ? 'Isthmus' : capitalizeFirst(location);
+      const echoDesc = n.tirads?.echogenicity ? n.tirads.echogenicity.toLowerCase() + ' ' : '';
+      return `   - ${locationText}: ${echoDesc}nodule, max diameter ${maxDiameter} cm, ACR TI-RADS ${n.tirads?.category || 'N/A'}.`;
     });
-    parts.push(noduleImpressions.join('; '));
+    lines.push(`${itemNum}) Nodules:`);
+    lines.push(...noduleLines);
   }
 
-  return parts.join('\n') || 'No findings';
+  return lines.join('\n') || 'No findings';
 }
 
 /**
- * 生成葉描述的印象
+ * 格式化單個葉的印象
+ * @param {Object} lobe - 葉資料
+ * @param {string} label - 標籤
+ * @returns {string} 印象文字
+ */
+function formatLobeImpression(lobe, label) {
+  const parts = [label + ':'];
+
+  // Volume
+  if (lobe.volume_ml) {
+    parts.push(`volume ${lobe.volume_ml} mL;`);
+  } else if (lobe.dimensions) {
+    const vol = Math.round(0.524 * lobe.dimensions.length * lobe.dimensions.width * (lobe.dimensions.height || 1) * 100) / 100;
+    parts.push(`volume ${vol} mL;`);
+  }
+
+  // Echotexture (homogeneity + echogenicity)
+  const echoTexture = [];
+  if (lobe.homogeneity) echoTexture.push(lobe.homogeneity);
+  if (lobe.echogenicity) echoTexture.push(lobe.echogenicity);
+  if (echoTexture.length > 0) {
+    parts.push(echoTexture.join(' ') + ' echotexture;');
+  }
+
+  // Vascularity
+  if (lobe.vascularity) {
+    parts.push(`vascularity ${lobe.vascularity}.`);
+  }
+
+  return parts.join(' ').replace(/;\s*\./g, '.').replace(/;$/, '.');
+}
+
+/**
+ * 格式化峽部印象
+ * @param {Object} isthmus - 峽部資料
+ * @returns {string} 印象文字
+ */
+function formatIsthmusImpression(isthmus) {
+  const parts = ['Isthmus:'];
+
+  if (isthmus.thickness_cm) {
+    parts.push(`thickness ${isthmus.thickness_cm} cm;`);
+  }
+
+  if (isthmus.echogenicity) {
+    parts.push(`${isthmus.echogenicity} echogenicity;`);
+  }
+
+  if (isthmus.vascularity) {
+    parts.push(`vascularity ${isthmus.vascularity}.`);
+  }
+
+  return parts.join(' ').replace(/;\s*\./g, '.').replace(/;$/, '.');
+}
+
+/**
+ * 首字母大寫
+ * @param {string} str - 字串
+ * @returns {string} 首字母大寫的字串
+ */
+function capitalizeFirst(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * 生成葉描述的印象（純葉模式用）
  * @param {Object} lobes - 葉資料
  * @returns {string} 印象描述
  */
 function generateLobeImpression(lobes) {
-  const parts = [];
+  const lines = [];
+  let itemNum = 1;
 
   if (lobes.rightLobe) {
-    const rl = lobes.rightLobe;
-    let desc = 'Right lobe';
-    if (rl.volume_ml) desc += ` (${rl.volume_ml} mL)`;
-    if (rl.homogeneity) desc += `: ${rl.homogeneity}`;
-    if (rl.echogenicity) desc += `, ${rl.echogenicity}`;
-    parts.push(desc);
+    lines.push(`${itemNum}) ${formatLobeImpression(lobes.rightLobe, 'Right lobe')}`);
+    itemNum++;
   }
 
   if (lobes.leftLobe) {
-    const ll = lobes.leftLobe;
-    let desc = 'Left lobe';
-    if (ll.volume_ml) desc += ` (${ll.volume_ml} mL)`;
-    if (ll.homogeneity) desc += `: ${ll.homogeneity}`;
-    if (ll.echogenicity) desc += `, ${ll.echogenicity}`;
-    parts.push(desc);
+    lines.push(`${itemNum}) ${formatLobeImpression(lobes.leftLobe, 'Left lobe')}`);
+    itemNum++;
   }
 
   if (lobes.isthmus) {
-    const is = lobes.isthmus;
-    let desc = 'Isthmus';
-    if (is.thickness_cm) desc += ` ${is.thickness_cm} cm`;
-    if (is.echogenicity) desc += `: ${is.echogenicity}`;
-    parts.push(desc);
+    lines.push(`${itemNum}) ${formatIsthmusImpression(lobes.isthmus)}`);
   }
 
-  return parts.join('; ') || 'No lobe information';
+  return lines.join('\n') || 'No lobe information';
 }
 
 /**
