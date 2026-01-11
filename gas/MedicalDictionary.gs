@@ -846,8 +846,8 @@ function parseNumericInput(input) {
 function detectInputMode(input) {
   const normalized = normalizeInput(input);
 
-  // 檢測 TIRADS XXXXX 格式（5位數字代碼）
-  if (/TIRADS\s*\d{5}/i.test(normalized) || /\d+[x×\*]\d+[x×\*]\d+.*\d{5}/.test(normalized)) {
+  // 檢測 TIRADS/TI-RADS XXXXX 格式（5位數字代碼）
+  if (/TI-?RADS\s*\d{5}/i.test(normalized) || /\d+[x×\*]\d+[x×\*]\d+.*\d{5}/.test(normalized)) {
     return 'tirads_code';
   }
 
@@ -876,7 +876,7 @@ function parseTiradsCodeInput(input) {
   // 如果只有一個部分，嘗試用 TIRADS 模式分割（每個 TIRADS XXXXX 後面開始新結節）
   if (parts.length === 1) {
     // 匹配 "TIRADS XXXXX" 後面跟著新的位置描述（右/左/峽）
-    const multiPattern = /(TIRADS\s*\d{5})\s*(?=[右左峽Rr])/gi;
+    const multiPattern = /(TI-?RADS\s*\d{5})\s*(?=[右左峽Rr])/gi;
     const splitText = normalized.replace(multiPattern, '$1|||');
     if (splitText.includes('|||')) {
       parts = splitText.split('|||').map(s => s.trim()).filter(s => s);
@@ -960,7 +960,7 @@ function parseSingleTiradsCode(input) {
   }
 
   // 提取 TIRADS 代碼（5位數字）
-  const tiradsMatch = input.match(/TIRADS\s*(\d{5})/i) || input.match(/(\d{5})$/);
+  const tiradsMatch = input.match(/TI-?RADS\s*(\d{5})/i) || input.match(/(\d{5})$/);
   if (!tiradsMatch) return null;
 
   const code = tiradsMatch[1];
@@ -1236,16 +1236,16 @@ function formatIsthmus(isthmus) {
 function isLobeInput(input) {
   const normalized = normalizeInput(input).toLowerCase();
 
-  // 包含 lobe 關鍵字
-  if (/lobe|葉/.test(normalized)) {
+  // 包含 lobe 關鍵字或甲狀腺大小描述
+  if (/lobe|葉|[右左]側?甲狀腺.{0,2}大小|thyroid.{0,5}size/.test(normalized)) {
     // 但不是結節描述（不包含 TIRADS 或 5 位數字分數）
-    if (!/tirads|nodule|結節|\d{5}/.test(normalized)) {
+    if (!/ti-?rads|nodule|結節|\d{5}/.test(normalized)) {
       return true;
     }
   }
 
   // 峽部且不是結節
-  if (/^峽|^isthmus/i.test(normalized) && !/tirads|nodule|結節|\d{5}/.test(normalized)) {
+  if (/^峽|^isthmus/i.test(normalized) && !/ti-?rads|nodule|結節|\d{5}/.test(normalized)) {
     return true;
   }
 
@@ -1261,8 +1261,9 @@ function isMixedInput(input) {
   const normalized = normalizeInput(input).toLowerCase();
 
   // 同時包含葉描述和結節描述
-  const hasLobe = /甲狀腺.{0,2}葉|右葉|左葉|lobe/i.test(normalized);
-  const hasNodule = /tirads|結節|nodule|\d{5}/.test(normalized);
+  // 擴充葉描述模式：包含「右側/左側甲狀腺大小」、「右/左甲狀腺」等
+  const hasLobe = /甲狀腺.{0,2}葉|右葉|左葉|lobe|[右左]側?甲狀腺.{0,2}大小|[右左]側?甲狀腺.{0,5}(cm|公分)|thyroid.{0,5}(size|lobe)/i.test(normalized);
+  const hasNodule = /tirads|ti-rads|結節|nodule|\d{5}/.test(normalized);
 
   return hasLobe && hasNodule;
 }
@@ -1279,7 +1280,7 @@ function separateMixedInput(input) {
   // 如果只有一行，嘗試用其他方式分隔（例如：句號、分號、或關鍵字）
   if (lines.length === 1) {
     // 嘗試在「結節」或「TIRADS」前面分割
-    const splitByNodule = input.split(/(?=右側甲狀腺結節|左側甲狀腺結節|右甲狀腺結節|左甲狀腺結節|結節|(?<![右左])[\s，,]+(?=右|左)\s*\d+\.?\d*\s*[x×\*])/i);
+    const splitByNodule = input.split(/(?=右側甲狀腺結節|左側甲狀腺結節|右甲狀腺結節|左甲狀腺結節|[右左]側?有.{0,3}結節|(?<![右左])[\s，,]+(?=右|左)\s*\d+\.?\d*\s*[x×\*])/i);
     if (splitByNodule.length > 1) {
       lines = splitByNodule.map(s => s.trim()).filter(s => s);
     }
@@ -1290,8 +1291,10 @@ function separateMixedInput(input) {
 
   for (const line of lines) {
     // 判斷這行屬於哪種類型
-    const isLobeLine = /右葉|左葉|甲狀腺.{0,2}葉|lobe\s*(大小|size)?/i.test(line);
-    const isNoduleLine = /結節|nodule|tirads\s*\d{5}|\d{5}\s*$/i.test(line);
+    // 擴充葉描述：包含「右側/左側甲狀腺大小」
+    const isLobeLine = /右葉|左葉|甲狀腺.{0,2}葉|lobe\s*(大小|size)?|[右左]側?甲狀腺.{0,2}大小/i.test(line);
+    // 擴充結節描述：支援 TI-RADS（有連字號）
+    const isNoduleLine = /結節|nodule|ti-?rads\s*\d{5}|\d{5}\s*$/i.test(line);
 
     if (isLobeLine && !isNoduleLine) {
       lobeLines.push(line);
@@ -1300,7 +1303,7 @@ function separateMixedInput(input) {
     } else {
       // 檢查是否有葉的尺寸描述但沒有 TIRADS
       const hasDimensions = /\d+\.?\d*\s*[x×\*]\s*\d+\.?\d*\s*[x×\*]\s*\d+\.?\d*/i.test(line);
-      const hasTirads = /tirads|\d{5}/i.test(line);
+      const hasTirads = /ti-?rads|\d{5}/i.test(line);
 
       if (hasDimensions && !hasTirads && /homogeneous|heterogeneous|均質|血流|vascularity|echoic/i.test(line)) {
         lobeLines.push(line);
@@ -1328,8 +1331,13 @@ function parseComplexLobeInput(input) {
     isthmus: null
   };
 
-  // 分段處理
-  const segments = input.split(/(?=甲狀腺|右葉|左葉|另外一側|峽部|isthmus|right|left)/i).filter(s => s.trim());
+  // 先用分號分隔（支援中英文分號）
+  let segments = input.split(/[;；]+/).map(s => s.trim()).filter(s => s);
+
+  // 如果只有一個部分，嘗試用關鍵字分隔
+  if (segments.length === 1) {
+    segments = input.split(/(?=[右左]側?甲狀腺|甲狀腺[右左]|右葉|左葉|另外一側|峽部|isthmus|right\s*(?:lobe|thyroid)|left\s*(?:lobe|thyroid))/i).filter(s => s.trim());
+  }
 
   for (const segment of segments) {
     const lobe = parseComplexSingleLobe(segment);
@@ -1355,10 +1363,10 @@ function parseComplexLobeInput(input) {
 function parseComplexSingleLobe(input) {
   let type = null;
 
-  // 判斷葉類型
-  if (/右葉|甲狀腺右|right/i.test(input)) {
+  // 判斷葉類型（擴充支援「右側甲狀腺」、「右甲狀腺」等格式）
+  if (/右葉|甲狀腺右|右側?甲狀腺|right/i.test(input)) {
     type = 'right';
-  } else if (/左葉|甲狀腺左|另外一側|left/i.test(input)) {
+  } else if (/左葉|甲狀腺左|左側?甲狀腺|另外一側|left/i.test(input)) {
     type = 'left';
   } else if (/峽|isthmus/i.test(input)) {
     type = 'isthmus';
