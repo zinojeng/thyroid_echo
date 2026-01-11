@@ -1270,31 +1270,38 @@ function isMixedInput(input) {
  * @returns {Object} { lobeInput, noduleInput }
  */
 function separateMixedInput(input) {
-  const lines = input.split(/[\n\r]+/).map(s => s.trim()).filter(s => s);
+  // 先嘗試用換行分隔
+  let lines = input.split(/[\n\r]+/).map(s => s.trim()).filter(s => s);
+
+  // 如果只有一行，嘗試用其他方式分隔（例如：句號、分號、或關鍵字）
+  if (lines.length === 1) {
+    // 嘗試在「結節」或「TIRADS」前面分割
+    const splitByNodule = input.split(/(?=右側甲狀腺結節|左側甲狀腺結節|右甲狀腺結節|左甲狀腺結節|結節|(?<![右左])[\s，,]+(?=右|左)\s*\d+\.?\d*\s*[x×\*])/i);
+    if (splitByNodule.length > 1) {
+      lines = splitByNodule.map(s => s.trim()).filter(s => s);
+    }
+  }
 
   const lobeLines = [];
   const noduleLines = [];
 
-  let currentSection = null;
-
   for (const line of lines) {
     // 判斷這行屬於哪種類型
-    if (/甲狀腺.{0,2}葉|右葉|左葉|另外一側|左側|右側.*[:：]|lobe/i.test(line) && !/結節|nodule|tirads/i.test(line)) {
-      currentSection = 'lobe';
+    const isLobeLine = /右葉|左葉|甲狀腺.{0,2}葉|lobe\s*(大小|size)?/i.test(line);
+    const isNoduleLine = /結節|nodule|tirads\s*\d{5}|\d{5}\s*$/i.test(line);
+
+    if (isLobeLine && !isNoduleLine) {
       lobeLines.push(line);
-    } else if (/結節|nodule|tirads|\d{5}/i.test(line)) {
-      currentSection = 'nodule';
-      noduleLines.push(line);
-    } else if (currentSection === 'lobe') {
-      // 如果當前在葉描述段落，繼續加入
-      lobeLines.push(line);
-    } else if (currentSection === 'nodule') {
+    } else if (isNoduleLine) {
       noduleLines.push(line);
     } else {
-      // 預設：嘗試判斷是否為葉描述的延續
-      if (/公分|cm|homogeneous|heterogeneous|均質|均勻|血流|vascularity|isoechoic|hypoechoic/i.test(line)) {
+      // 檢查是否有葉的尺寸描述但沒有 TIRADS
+      const hasDimensions = /\d+\.?\d*\s*[x×\*]\s*\d+\.?\d*\s*[x×\*]\s*\d+\.?\d*/i.test(line);
+      const hasTirads = /tirads|\d{5}/i.test(line);
+
+      if (hasDimensions && !hasTirads && /homogeneous|heterogeneous|均質|血流|vascularity|echoic/i.test(line)) {
         lobeLines.push(line);
-      } else {
+      } else if (hasTirads) {
         noduleLines.push(line);
       }
     }
@@ -1386,11 +1393,11 @@ function parseComplexSingleLobe(input) {
   }
 
   // 提取血流
-  if (/hypervascularity|血流增多|血流增加|血流豐富|increased/i.test(input)) {
+  if (/hypervascularity|血流增多|血流增加|血流豐富|血流過多|increased/i.test(input)) {
     result.vascularity = 'increased';
   } else if (/hypovascularity|血流減少|血流減低|decreased/i.test(input)) {
     result.vascularity = 'decreased';
-  } else if (/正常|normal/i.test(input)) {
+  } else if (/血流正常|正常血流|normal/i.test(input)) {
     result.vascularity = 'normal';
   }
 
