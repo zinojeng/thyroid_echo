@@ -128,6 +128,9 @@ function processReport(input, mode, options) {
   } else if (detectedMode === 'lobe') {
     // 葉描述模式：本地解析，不需要 LLM
     result = processLobeMode(input);
+  } else if (detectedMode === 'mixed') {
+    // 混合模式：葉描述 + 結節描述
+    result = processMixedMode(input, options);
   } else {
     // 自然語言模式：使用 Groq LLM
     result = processNaturalMode(input, options);
@@ -144,12 +147,16 @@ function processReport(input, mode, options) {
 }
 
 /**
- * 擴展的輸入模式偵測（包含 lobe 模式）
+ * 擴展的輸入模式偵測（包含 lobe 模式和混合模式）
  * @param {string} input - 輸入文字
- * @returns {string} 'numeric', 'tirads_code', 'lobe', 或 'natural'
+ * @returns {string} 'numeric', 'tirads_code', 'lobe', 'mixed', 或 'natural'
  */
 function detectInputModeExtended(input) {
-  // 先檢測是否為葉描述
+  // 先檢測是否為混合輸入（葉描述 + 結節描述）
+  if (isMixedInput(input)) {
+    return 'mixed';
+  }
+  // 檢測是否為純葉描述
   if (isLobeInput(input)) {
     return 'lobe';
   }
@@ -179,6 +186,82 @@ function processLobeMode(input) {
     formatted: formatted,
     impression: generateLobeImpression(lobes)
   };
+}
+
+/**
+ * 處理混合模式（葉描述 + 結節描述）
+ * @param {string} input - 輸入文字
+ * @param {Object} options - 選項
+ * @returns {Object} 結構化報告
+ */
+function processMixedMode(input, options) {
+  // 分離葉描述和結節描述
+  const { lobeInput, noduleInput } = separateMixedInput(input);
+
+  const result = {
+    success: true,
+    type: 'mixed_report'
+  };
+
+  // 處理葉描述
+  if (lobeInput && lobeInput.trim()) {
+    const lobes = parseComplexLobeInput(lobeInput);
+    if (lobes) {
+      result.lobes = lobes;
+      result.lobeFormatted = formatLobeDescription(lobes);
+    }
+  }
+
+  // 處理結節描述
+  if (noduleInput && noduleInput.trim()) {
+    // 偵測結節輸入的模式
+    const noduleMode = detectInputMode(noduleInput);
+
+    let noduleResult;
+    if (noduleMode === 'tirads_code') {
+      noduleResult = processTiradsCodeMode(noduleInput);
+    } else if (noduleMode === 'numeric') {
+      noduleResult = processNumericMode(noduleInput);
+    } else {
+      // 自然語言模式需要 LLM
+      noduleResult = processNaturalMode(noduleInput, options);
+    }
+
+    if (noduleResult && noduleResult.nodules) {
+      result.nodules = noduleResult.nodules;
+      result.recommendation = noduleResult.recommendation;
+    }
+  }
+
+  // 生成綜合印象
+  result.impression = generateMixedImpression(result);
+
+  return result;
+}
+
+/**
+ * 生成混合報告的印象
+ * @param {Object} result - 混合報告結果
+ * @returns {string} 印象描述
+ */
+function generateMixedImpression(result) {
+  const parts = [];
+
+  // 葉描述印象
+  if (result.lobes) {
+    parts.push(generateLobeImpression(result.lobes));
+  }
+
+  // 結節印象
+  if (result.nodules && result.nodules.length > 0) {
+    const noduleImpressions = result.nodules.map(n => {
+      const size = n.size_cm || (n.dimensions ? Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height || 0) : 0);
+      return `${n.tirads.category} nodule at ${n.location} (${size}cm)`;
+    });
+    parts.push(noduleImpressions.join('; '));
+  }
+
+  return parts.join('\n') || 'No findings';
 }
 
 /**

@@ -1248,3 +1248,151 @@ function isLobeInput(input) {
 
   return false;
 }
+
+/**
+ * 檢測輸入是否包含混合內容（葉描述 + 結節描述）
+ * @param {string} input - 輸入文字
+ * @returns {boolean} 是否為混合輸入
+ */
+function isMixedInput(input) {
+  const normalized = normalizeInput(input).toLowerCase();
+
+  // 同時包含葉描述和結節描述
+  const hasLobe = /甲狀腺.{0,2}葉|右葉|左葉|lobe/i.test(normalized);
+  const hasNodule = /tirads|結節|nodule|\d{5}/.test(normalized);
+
+  return hasLobe && hasNodule;
+}
+
+/**
+ * 分離混合輸入為葉描述和結節描述
+ * @param {string} input - 輸入文字
+ * @returns {Object} { lobeInput, noduleInput }
+ */
+function separateMixedInput(input) {
+  const lines = input.split(/[\n\r]+/).map(s => s.trim()).filter(s => s);
+
+  const lobeLines = [];
+  const noduleLines = [];
+
+  let currentSection = null;
+
+  for (const line of lines) {
+    // 判斷這行屬於哪種類型
+    if (/甲狀腺.{0,2}葉|右葉|左葉|另外一側|左側|右側.*[:：]|lobe/i.test(line) && !/結節|nodule|tirads/i.test(line)) {
+      currentSection = 'lobe';
+      lobeLines.push(line);
+    } else if (/結節|nodule|tirads|\d{5}/i.test(line)) {
+      currentSection = 'nodule';
+      noduleLines.push(line);
+    } else if (currentSection === 'lobe') {
+      // 如果當前在葉描述段落，繼續加入
+      lobeLines.push(line);
+    } else if (currentSection === 'nodule') {
+      noduleLines.push(line);
+    } else {
+      // 預設：嘗試判斷是否為葉描述的延續
+      if (/公分|cm|homogeneous|heterogeneous|均質|均勻|血流|vascularity|isoechoic|hypoechoic/i.test(line)) {
+        lobeLines.push(line);
+      } else {
+        noduleLines.push(line);
+      }
+    }
+  }
+
+  return {
+    lobeInput: lobeLines.join('\n'),
+    noduleInput: noduleLines.join('\n')
+  };
+}
+
+/**
+ * 從複雜的葉描述文字中解析葉資訊
+ * @param {string} input - 葉描述文字
+ * @returns {Object|null} 解析結果
+ */
+function parseComplexLobeInput(input) {
+  const lobes = {
+    rightLobe: null,
+    leftLobe: null,
+    isthmus: null
+  };
+
+  // 分段處理
+  const segments = input.split(/(?=甲狀腺|右葉|左葉|另外一側|峽部|isthmus|right|left)/i).filter(s => s.trim());
+
+  for (const segment of segments) {
+    const lobe = parseComplexSingleLobe(segment);
+    if (lobe) {
+      if (lobe.type === 'right') lobes.rightLobe = lobe;
+      else if (lobe.type === 'left') lobes.leftLobe = lobe;
+      else if (lobe.type === 'isthmus') lobes.isthmus = lobe;
+    }
+  }
+
+  if (lobes.rightLobe || lobes.leftLobe || lobes.isthmus) {
+    return lobes;
+  }
+
+  return null;
+}
+
+/**
+ * 解析單個複雜葉描述
+ * @param {string} input - 單個葉描述
+ * @returns {Object|null} 解析結果
+ */
+function parseComplexSingleLobe(input) {
+  let type = null;
+
+  // 判斷葉類型
+  if (/右葉|甲狀腺右|right/i.test(input)) {
+    type = 'right';
+  } else if (/左葉|甲狀腺左|另外一側|left/i.test(input)) {
+    type = 'left';
+  } else if (/峽|isthmus/i.test(input)) {
+    type = 'isthmus';
+  }
+
+  if (!type) return null;
+
+  const result = { type };
+
+  // 提取尺寸 (支援多種格式: 1 × 2 × 3, 1x2x3, 1*2*3)
+  const dimMatch = input.match(/(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)\s*[×x\*]\s*(\d+\.?\d*)/i);
+  if (dimMatch) {
+    result.dimensions = {
+      length: parseFloat(dimMatch[1]),
+      width: parseFloat(dimMatch[2]),
+      height: parseFloat(dimMatch[3])
+    };
+    result.volume_ml = Math.round(0.524 * result.dimensions.length * result.dimensions.width * result.dimensions.height * 100) / 100;
+  }
+
+  // 提取均質性
+  if (/heterogeneous|不均質|不均勻|非均質/i.test(input)) {
+    result.homogeneity = 'heterogeneous';
+  } else if (/homogeneous|均質|均勻/i.test(input)) {
+    result.homogeneity = 'homogeneous';
+  }
+
+  // 提取回音性
+  if (/hypoechoic|低回音/i.test(input)) {
+    result.echogenicity = 'hypoechoic';
+  } else if (/hyperechoic|高回音/i.test(input)) {
+    result.echogenicity = 'hyperechoic';
+  } else if (/isoechoic|等回音/i.test(input)) {
+    result.echogenicity = 'isoechoic';
+  }
+
+  // 提取血流
+  if (/hypervascularity|血流增多|血流增加|血流豐富|increased/i.test(input)) {
+    result.vascularity = 'increased';
+  } else if (/hypovascularity|血流減少|血流減低|decreased/i.test(input)) {
+    result.vascularity = 'decreased';
+  } else if (/正常|normal/i.test(input)) {
+    result.vascularity = 'normal';
+  }
+
+  return result;
+}
