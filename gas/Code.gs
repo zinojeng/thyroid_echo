@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.6.2';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -23,6 +23,7 @@ const APP_VERSION = '1.6.1';
 // 1.5.1 - 移除多餘的整體 Recommendation（每個結節已有個別建議）
 // 1.6.0 - 新增甲狀腺疾病診斷識別 (Autoimmune thyroid disease, Hashimoto's, Graves', etc.)
 // 1.6.1 - 擴充甲狀腺疾病診斷字典 (新增 12 種常見疾病)
+// 1.6.2 - 修正 normalizeInput 保留換行符；修正 apostrophe 匹配；葉模式也支援診斷
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -198,13 +199,23 @@ function processLobeMode(input) {
   // 格式化輸出
   const formatted = formatLobeDescription(lobes);
 
-  return {
+  const result = {
     success: true,
     type: 'lobe_description',
     lobes: lobes,
-    formatted: formatted,
-    impression: generateLobeImpression(lobes)
+    formatted: formatted
   };
+
+  // 解析甲狀腺疾病診斷
+  const diagnoses = parseThyroidDiagnoses(input);
+  if (diagnoses.length > 0) {
+    result.diagnoses = diagnoses;
+  }
+
+  // 生成印象（包含診斷）
+  result.impression = generateLobeImpressionWithDiagnosis(lobes, diagnoses);
+
+  return result;
 }
 
 /**
@@ -431,6 +442,39 @@ function generateLobeImpression(lobes) {
 
   if (lobes.isthmus) {
     lines.push(`${itemNum}) ${formatIsthmusImpression(lobes.isthmus)}`);
+  }
+
+  return lines.join('\n') || 'No lobe information';
+}
+
+/**
+ * 生成葉描述印象（包含診斷）
+ * @param {Object} lobes - 葉資料
+ * @param {string[]} diagnoses - 診斷列表
+ * @returns {string} 印象描述
+ */
+function generateLobeImpressionWithDiagnosis(lobes, diagnoses) {
+  const lines = [];
+  let itemNum = 1;
+
+  if (lobes.rightLobe) {
+    lines.push(`${itemNum}) ${formatLobeImpression(lobes.rightLobe, 'Right lobe')}`);
+    itemNum++;
+  }
+
+  if (lobes.leftLobe) {
+    lines.push(`${itemNum}) ${formatLobeImpression(lobes.leftLobe, 'Left lobe')}`);
+    itemNum++;
+  }
+
+  if (lobes.isthmus) {
+    lines.push(`${itemNum}) ${formatIsthmusImpression(lobes.isthmus)}`);
+    itemNum++;
+  }
+
+  // 診斷印象
+  if (diagnoses && diagnoses.length > 0) {
+    lines.push(`${itemNum}) Diagnosis: ${diagnoses.join('; ')}.`);
   }
 
   return lines.join('\n') || 'No lobe information';

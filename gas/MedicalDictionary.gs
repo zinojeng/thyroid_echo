@@ -714,16 +714,19 @@ function lookupTermScore(term, category) {
  */
 function normalizeInput(text) {
   let result = text;
-  
+
   // 轉換中文數字
   result = convertChineseNumbers(result);
-  
+
   // 統一單位
   result = result.replace(/公分|cm|CM|厘米/g, 'cm');
-  
-  // 移除多餘空白
-  result = result.replace(/\s+/g, ' ').trim();
-  
+
+  // 移除多餘水平空白（保留換行符）
+  result = result.replace(/[^\S\r\n]+/g, ' ');
+
+  // 移除首尾空白
+  result = result.trim();
+
   return result;
 }
 
@@ -1524,16 +1527,30 @@ const THYROID_DIAGNOSIS_TERMS = {
 };
 
 /**
+ * 正規化 apostrophe 字元（將各種引號統一為標準 apostrophe）
+ * @param {string} text - 輸入文字
+ * @returns {string} 正規化後的文字
+ */
+function normalizeApostrophe(text) {
+  // 將各種 apostrophe 和引號字元統一為標準 '
+  return text
+    .replace(/[\u2018\u2019\u201B\u0060\u00B4]/g, "'")  // ' ' ‛ ` ´
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"');       // " " „ ‟
+}
+
+/**
  * 解析輸入中的甲狀腺疾病診斷
  * @param {string} input - 輸入文字
  * @returns {string[]} 診斷列表
  */
 function parseThyroidDiagnoses(input) {
   const diagnoses = [];
-  const lowerInput = input.toLowerCase();
+  // 正規化 apostrophe 並轉小寫
+  const normalizedInput = normalizeApostrophe(input).toLowerCase();
 
   for (const [term, diagnosis] of Object.entries(THYROID_DIAGNOSIS_TERMS)) {
-    if (lowerInput.includes(term.toLowerCase())) {
+    const normalizedTerm = normalizeApostrophe(term).toLowerCase();
+    if (normalizedInput.includes(normalizedTerm)) {
       if (!diagnoses.includes(diagnosis)) {
         diagnoses.push(diagnosis);
       }
@@ -1549,8 +1566,9 @@ function parseThyroidDiagnoses(input) {
  * @returns {boolean}
  */
 function hasDiagnosis(input) {
-  const lowerInput = input.toLowerCase();
-  return Object.keys(THYROID_DIAGNOSIS_TERMS).some(term =>
-    lowerInput.includes(term.toLowerCase())
-  );
+  const normalizedInput = normalizeApostrophe(input).toLowerCase();
+  return Object.keys(THYROID_DIAGNOSIS_TERMS).some(term => {
+    const normalizedTerm = normalizeApostrophe(term).toLowerCase();
+    return normalizedInput.includes(normalizedTerm);
+  });
 }
