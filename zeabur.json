@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.zeabur.app/zeabur.json",
+  "build": {
+    "type": "static",
+    "root_directory": "standalone"
+  },
+  "output": {
+    "type": "static",
+    "dir": "standalone"
+  }
+}
