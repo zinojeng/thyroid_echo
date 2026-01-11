@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.1';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -20,6 +20,7 @@ const APP_VERSION = '1.5.0';
 //         更新 FNA 建議依據 ACR TI-RADS 2017 White Paper 標準
 // 1.4.1 - WebApp 顯示區也使用新術語格式 (echogenicity/echotexture/vascularity)
 // 1.5.0 - Impression 中每個結節顯示個別 FNA 建議 (依 ACR TI-RADS 2017)
+// 1.5.1 - 移除多餘的整體 Recommendation（每個結節已有個別建議）
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -245,7 +246,7 @@ function processMixedMode(input, options) {
 
     if (noduleResult && noduleResult.nodules) {
       result.nodules = noduleResult.nodules;
-      result.recommendation = noduleResult.recommendation;
+      // 不再設置整體 recommendation，因為每個結節已有個別建議
     }
   }
 
@@ -445,13 +446,7 @@ function processTiradsCodeMode(input) {
     impression: generateImpression(nodules)
   };
 
-  // 取得整體建議（以最嚴重的為準）
-  if (nodules.length > 0) {
-    const mostSevere = nodules.reduce((prev, curr) =>
-      (curr.tirads?.total || 0) > (prev.tirads?.total || 0) ? curr : prev
-    );
-    result.recommendation = mostSevere.recommendation;
-  }
+  // 每個結節已有個別建議，不再設置整體 recommendation
 
   return result;
 }
@@ -496,19 +491,13 @@ function processNumericMode(input) {
     nodules: nodules,
     impression: generateImpression(nodules)
   };
-  
-  // 取得整體建議（以最嚴重的為準）
-  if (nodules.length > 0) {
-    const mostSevere = nodules.reduce((prev, curr) => 
-      (curr.tirads?.total || 0) > (prev.tirads?.total || 0) ? curr : prev
-    );
-    result.recommendation = mostSevere.recommendation;
-  }
-  
+
+  // 每個結節已有個別建議，不再設置整體 recommendation
+
   if (errors.length > 0) {
     result.warnings = errors;
   }
-  
+
   return result;
 }
 
