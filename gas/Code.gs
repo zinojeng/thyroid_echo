@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.5.0';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -19,6 +19,7 @@ const APP_VERSION = '1.4.1';
 // 1.4.0 - 修正術語：echogenicity(明暗) vs echotexture(均勻度)；
 //         更新 FNA 建議依據 ACR TI-RADS 2017 White Paper 標準
 // 1.4.1 - WebApp 顯示區也使用新術語格式 (echogenicity/echotexture/vascularity)
+// 1.5.0 - Impression 中每個結節顯示個別 FNA 建議 (依 ACR TI-RADS 2017)
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -279,27 +280,37 @@ function generateMixedImpression(result) {
     }
   }
 
-  // 結節印象 (max diameter + TI-RADS)
+  // 結節印象 (max diameter + TI-RADS + 個別建議)
   if (result.nodules && result.nodules.length > 0) {
-    const noduleLines = result.nodules.map(n => {
+    const noduleLines = [];
+    result.nodules.forEach((n, idx) => {
       const location = n.location || 'unknown';
       const locationText = location.includes('right') ? 'Right lobe' : location.includes('left') ? 'Left lobe' : location.includes('isthmus') ? 'Isthmus' : capitalizeFirst(location);
       const echoDesc = n.tirads?.echogenicity ? n.tirads.echogenicity.toLowerCase() + ' ' : '';
+      const category = n.tirads?.category || 'N/A';
 
-      // 只有三個維度或有明確 size_cm 時才顯示 max diameter
+      // 計算最大徑
+      let maxDiameter = 0;
       let sizeText = '';
       if (n.size_cm) {
+        maxDiameter = n.size_cm;
         sizeText = `, max diameter ${n.size_cm} cm`;
       } else if (n.dimensions && n.dimensions.length && n.dimensions.width && n.dimensions.height) {
-        const maxDiameter = Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height);
+        maxDiameter = Math.max(n.dimensions.length, n.dimensions.width, n.dimensions.height);
         sizeText = `, max diameter ${maxDiameter} cm`;
       } else if (n.dimensions) {
-        // 只有兩個維度，顯示尺寸
         const d = n.dimensions;
         sizeText = d.height ? `, ${d.length} x ${d.width} x ${d.height} cm` : `, ${d.length} x ${d.width} cm`;
+        // 嘗試取得最大值
+        maxDiameter = Math.max(d.length || 0, d.width || 0, d.height || 0);
       }
 
-      return `   - ${locationText}: ${echoDesc}nodule${sizeText}, ACR TI-RADS ${n.tirads?.category || 'N/A'}.`;
+      // 結節描述行
+      noduleLines.push(`   - ${locationText}: ${echoDesc}nodule${sizeText}, ACR TI-RADS ${category}.`);
+
+      // 個別建議行
+      const recommendation = getRecommendation(category, maxDiameter);
+      noduleLines.push(`     → ${recommendation}`);
     });
     lines.push(`${itemNum}) Nodules:`);
     lines.push(...noduleLines);
