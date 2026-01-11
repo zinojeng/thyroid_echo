@@ -518,7 +518,51 @@
 
       let html = '';
 
+      // 顯示葉描述 (Lobe Descriptions)
+      if (result.lobes || result.lobeFormatted) {
+        html += `<div class="lobe-section" style="margin-bottom: 16px;">`;
+        html += `<h4 style="color: #374151; margin-bottom: 12px;">Thyroid Lobes</h4>`;
+
+        if (result.lobeFormatted) {
+          if (result.lobeFormatted.rightLobe) {
+            html += `<div class="lobe-card" style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <strong style="color: #166534;">Right Lobe:</strong> ${formatLobeText(result.lobes?.rightLobe, result.lobeFormatted.rightLobe)}
+            </div>`;
+          }
+          if (result.lobeFormatted.leftLobe) {
+            html += `<div class="lobe-card" style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <strong style="color: #1e40af;">Left Lobe:</strong> ${formatLobeText(result.lobes?.leftLobe, result.lobeFormatted.leftLobe)}
+            </div>`;
+          }
+          if (result.lobeFormatted.isthmus) {
+            html += `<div class="lobe-card" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <strong style="color: #92400e;">Isthmus:</strong> ${formatLobeText(result.lobes?.isthmus, result.lobeFormatted.isthmus)}
+            </div>`;
+          }
+        } else if (result.lobes) {
+          // Fallback: 直接顯示 lobes 物件
+          if (result.lobes.rightLobe) {
+            html += `<div class="lobe-card" style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <strong style="color: #166534;">Right Lobe:</strong> ${formatLobeFromData(result.lobes.rightLobe)}
+            </div>`;
+          }
+          if (result.lobes.leftLobe) {
+            html += `<div class="lobe-card" style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <strong style="color: #1e40af;">Left Lobe:</strong> ${formatLobeFromData(result.lobes.leftLobe)}
+            </div>`;
+          }
+          if (result.lobes.isthmus) {
+            html += `<div class="lobe-card" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <strong style="color: #92400e;">Isthmus:</strong> ${formatLobeFromData(result.lobes.isthmus)}
+            </div>`;
+          }
+        }
+        html += `</div>`;
+      }
+
+      // 顯示結節 (Nodules)
       if (result.nodules && result.nodules.length > 0) {
+        html += `<h4 style="color: #374151; margin-bottom: 12px;">Nodules</h4>`;
         result.nodules.forEach((nodule, index) => {
           const category = nodule.tirads?.category || '';
           const categoryClass = category.toLowerCase().replace('-', '');
@@ -550,6 +594,48 @@
       }
 
       document.getElementById('result-container').innerHTML = html;
+    }
+
+    // 格式化葉描述文字
+    function formatLobeText(lobeData, formattedText) {
+      if (formattedText) {
+        // 移除標籤（如 "Right lobe:"）
+        return formattedText.replace(/^(Right lobe|Left lobe|Isthmus):\s*/i, '');
+      }
+      return formatLobeFromData(lobeData);
+    }
+
+    // 從資料格式化葉描述
+    function formatLobeFromData(lobe) {
+      if (!lobe) return 'N/A';
+
+      const parts = [];
+
+      if (lobe.dimensions) {
+        const d = lobe.dimensions;
+        if (d.height) {
+          parts.push(`${d.length} x ${d.width} x ${d.height} cm`);
+        } else {
+          parts.push(`${d.length} x ${d.width} cm`);
+        }
+      }
+      if (lobe.thickness_cm) {
+        parts.push(`${lobe.thickness_cm} cm`);
+      }
+      if (lobe.volume_ml) {
+        parts.push(`(vol ${lobe.volume_ml} mL)`);
+      }
+      if (lobe.homogeneity) {
+        parts.push(lobe.homogeneity);
+      }
+      if (lobe.echogenicity) {
+        parts.push(lobe.echogenicity);
+      }
+      if (lobe.vascularity) {
+        parts.push(`vascularity ${lobe.vascularity}`);
+      }
+
+      return parts.join(', ') || 'N/A';
     }
 
     // Copy report
@@ -605,7 +691,36 @@
     function formatReportText(result) {
       let text = '';
 
+      // 葉描述
+      if (result.lobes || result.lobeFormatted) {
+        text += '=== Thyroid Lobes ===\n';
+        if (result.lobeFormatted) {
+          if (result.lobeFormatted.rightLobe) {
+            text += `Right lobe: ${formatLobeText(result.lobes?.rightLobe, result.lobeFormatted.rightLobe)}\n`;
+          }
+          if (result.lobeFormatted.leftLobe) {
+            text += `Left lobe: ${formatLobeText(result.lobes?.leftLobe, result.lobeFormatted.leftLobe)}\n`;
+          }
+          if (result.lobeFormatted.isthmus) {
+            text += `Isthmus: ${formatLobeText(result.lobes?.isthmus, result.lobeFormatted.isthmus)}\n`;
+          }
+        } else if (result.lobes) {
+          if (result.lobes.rightLobe) {
+            text += `Right lobe: ${formatLobeFromData(result.lobes.rightLobe)}\n`;
+          }
+          if (result.lobes.leftLobe) {
+            text += `Left lobe: ${formatLobeFromData(result.lobes.leftLobe)}\n`;
+          }
+          if (result.lobes.isthmus) {
+            text += `Isthmus: ${formatLobeFromData(result.lobes.isthmus)}\n`;
+          }
+        }
+        text += '\n';
+      }
+
+      // 結節描述
       if (result.nodules && result.nodules.length > 0) {
+        text += '=== Nodules ===\n';
         result.nodules.forEach((nodule, index) => {
           const t = nodule.tirads || {};
           text += `Nodule ${nodule.id || index + 1}: ${nodule.location || ''}, ${formatSizeText(nodule)}\n`;
