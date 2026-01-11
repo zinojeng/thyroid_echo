@@ -103,31 +103,69 @@ function doPost(e) {
 /**
  * 處理報告主邏輯
  * @param {string} input - 輸入文字
- * @param {string} mode - 模式 ('numeric', 'natural', 或 undefined 自動偵測)
+ * @param {string} mode - 模式 ('numeric', 'tirads_code', 'natural', 或 undefined 自動偵測)
  * @param {Object} options - 選項
  * @returns {Object} 結構化報告
  */
 function processReport(input, mode, options) {
   // 自動偵測模式
   const detectedMode = mode || detectInputMode(input);
-  
+
   let result;
-  
+
   if (detectedMode === 'numeric') {
     // 數字快速模式：本地解析，不需要呼叫 LLM
     result = processNumericMode(input);
+  } else if (detectedMode === 'tirads_code') {
+    // TIRADS 代碼模式：本地解析，不需要 LLM（最快！）
+    result = processTiradsCodeMode(input);
   } else {
     // 自然語言模式：使用 Groq LLM
     result = processNaturalMode(input, options);
   }
-  
+
   // 加入元資料
   result.metadata = {
     mode: detectedMode,
     processed_at: new Date().toISOString(),
-    api_version: '1.0.0'
+    api_version: '1.1.0'
   };
-  
+
+  return result;
+}
+
+/**
+ * 處理 TIRADS 代碼模式（不需要 LLM，純本地解析）
+ * 格式: "右側甲狀腺結節2.1x1.2x2.3，TIRADS 12001"
+ * @param {string} input - 輸入文字
+ * @returns {Object} 結構化報告
+ */
+function processTiradsCodeMode(input) {
+  const nodules = parseTiradsCodeInput(input);
+
+  if (!nodules || nodules.length === 0) {
+    throw new Error('Unable to parse TIRADS code format. Expected format: 右側甲狀腺結節2.1x1.2x2.3，TIRADS 12001');
+  }
+
+  // 為每個結節加上 id
+  nodules.forEach((nodule, index) => {
+    nodule.id = index + 1;
+  });
+
+  const result = {
+    success: true,
+    nodules: nodules,
+    impression: generateImpression(nodules)
+  };
+
+  // 取得整體建議（以最嚴重的為準）
+  if (nodules.length > 0) {
+    const mostSevere = nodules.reduce((prev, curr) =>
+      (curr.tirads?.total || 0) > (prev.tirads?.total || 0) ? curr : prev
+    );
+    result.recommendation = mostSevere.recommendation;
+  }
+
   return result;
 }
 

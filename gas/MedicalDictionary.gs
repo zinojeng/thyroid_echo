@@ -727,11 +727,159 @@ function parseNumericInput(input) {
 /**
  * 檢測輸入模式
  * @param {string} input - 輸入文字
- * @returns {string} 'numeric' 或 'natural'
+ * @returns {string} 'numeric', 'tirads_code', 或 'natural'
  */
 function detectInputMode(input) {
+  const normalized = normalizeInput(input);
+
+  // 檢測 TIRADS XXXXX 格式（5位數字代碼）
+  if (/TIRADS\s*\d{5}/i.test(normalized) || /\d+[x×\*]\d+[x×\*]\d+.*\d{5}/.test(normalized)) {
+    return 'tirads_code';
+  }
+
   // 使用更寬鬆的模式檢測數字輸入
   const locationPattern = '(右上極?|右中段?|右下極?|左上極?|左中段?|左下極?|峽部?|右葉上極|右葉中段|右葉下極|左葉上極|左葉中段|左葉下極|RU|RM|RL|LU|LM|LL|IS|right\\s*upper|right\\s*mid|right\\s*lower|left\\s*upper|left\\s*mid|left\\s*lower|isthmus)';
   const numericPattern = new RegExp(`^${locationPattern}\\s+[\\d.]+\\s*(?:cm|公分)?\\s+\\d\\s+\\d\\s+\\d\\s+\\d\\s+\\d$`, 'i');
-  return numericPattern.test(normalizeInput(input)) ? 'numeric' : 'natural';
+  return numericPattern.test(normalized) ? 'numeric' : 'natural';
+}
+
+/**
+ * 解析 TIRADS 代碼格式
+ * 格式: "右側甲狀腺結節2.1x1.2x2.3，TIRADS 12001"
+ * 或: "左側甲狀腺結節4.1x2.3x5.3，TIRADS 23033"
+ *
+ * TIRADS 5位數字代表: C E S M F
+ * @param {string} input - 輸入文字
+ * @returns {Object|null} 解析結果
+ */
+function parseTiradsCodeInput(input) {
+  const normalized = normalizeInput(input);
+
+  // 支援多個結節（以分號、換行分隔）
+  const parts = normalized.split(/[;；\n]/).map(s => s.trim()).filter(s => s);
+  const nodules = [];
+
+  for (const part of parts) {
+    const nodule = parseSingleTiradsCode(part);
+    if (nodule) {
+      nodules.push(nodule);
+    }
+  }
+
+  return nodules.length > 0 ? nodules : null;
+}
+
+/**
+ * 解析單個 TIRADS 代碼輸入
+ * @param {string} input - 單個結節描述
+ * @returns {Object|null} 解析結果
+ */
+function parseSingleTiradsCode(input) {
+  // 提取位置（右側/左側/峽部）
+  let location = 'unknown';
+  if (/右側|右葉|右甲/.test(input)) {
+    if (/上極|上/.test(input)) location = 'right upper';
+    else if (/下極|下/.test(input)) location = 'right lower';
+    else location = 'right mid';
+  } else if (/左側|左葉|左甲/.test(input)) {
+    if (/上極|上/.test(input)) location = 'left upper';
+    else if (/下極|下/.test(input)) location = 'left lower';
+    else location = 'left mid';
+  } else if (/峽部|峽/.test(input)) {
+    location = 'isthmus';
+  }
+
+  // 提取尺寸（支援多種格式）
+  let dimensions = null;
+  let size_cm = null;
+  let volume_ml = null;
+
+  // 格式: 2.1x1.2x2.3 或 2.1×1.2×2.3 或 2.1*1.2*2.3
+  const dimMatch = input.match(/(\d+\.?\d*)\s*[x×\*]\s*(\d+\.?\d*)\s*[x×\*]\s*(\d+\.?\d*)/i);
+  if (dimMatch) {
+    const [, l, w, h] = dimMatch;
+    dimensions = {
+      length: parseFloat(l),
+      width: parseFloat(w),
+      height: parseFloat(h)
+    };
+    size_cm = Math.max(dimensions.length, dimensions.width, dimensions.height);
+    // 計算體積: V = 0.524 × L × W × H
+    volume_ml = Math.round(0.524 * dimensions.length * dimensions.width * dimensions.height * 100) / 100;
+  } else {
+    // 格式: 2.1x1.2 或單一尺寸 2.3cm
+    const dim2Match = input.match(/(\d+\.?\d*)\s*[x×\*]\s*(\d+\.?\d*)/i);
+    if (dim2Match) {
+      const [, l, w] = dim2Match;
+      dimensions = {
+        length: parseFloat(l),
+        width: parseFloat(w)
+      };
+      size_cm = Math.max(dimensions.length, dimensions.width);
+    } else {
+      const sizeMatch = input.match(/(\d+\.?\d*)\s*(?:cm|公分)/i);
+      if (sizeMatch) {
+        size_cm = parseFloat(sizeMatch[1]);
+      }
+    }
+  }
+
+  // 提取 TIRADS 代碼（5位數字）
+  const tiradsMatch = input.match(/TIRADS\s*(\d{5})/i) || input.match(/(\d{5})$/);
+  if (!tiradsMatch) return null;
+
+  const code = tiradsMatch[1];
+  const C = parseInt(code[0]);
+  const E = parseInt(code[1]);
+  const S = parseInt(code[2]);
+  const M = parseInt(code[3]);
+  const F = parseInt(code[4]);
+
+  // 驗證並修正分數
+  const validation = validateAndCorrectScores({ C, E, S, M, F }, true);
+  const scores = validation.scores;
+
+  // 計算總分和分類
+  const total = calculateTotalScore(scores.C, scores.E, scores.S, scores.M, scores.F);
+  const category = getTiRadsCategory(total);
+
+  // 取得描述文字
+  const desc = scoresToDescription(scores);
+
+  // 取得建議
+  const recommendation = size_cm ? getRecommendation(category, size_cm) : null;
+
+  const result = {
+    location,
+    size_cm,
+    tirads: {
+      C: scores.C,
+      E: scores.E,
+      S: scores.S,
+      M: scores.M,
+      F: scores.F,
+      total,
+      category,
+      composition: desc.composition,
+      echogenicity: desc.echogenicity,
+      shape: desc.shape,
+      margin: desc.margin,
+      echogenicFoci: desc.echogenicFoci
+    }
+  };
+
+  if (dimensions) {
+    result.dimensions = dimensions;
+  }
+  if (volume_ml) {
+    result.volume_ml = volume_ml;
+  }
+  if (recommendation) {
+    result.recommendation = recommendation;
+  }
+  if (validation.corrections && validation.corrections.length > 0) {
+    result.auto_corrections = validation.corrections;
+  }
+
+  return result;
 }
