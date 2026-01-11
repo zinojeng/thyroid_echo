@@ -775,17 +775,24 @@ function parseTiradsCodeInput(input) {
  * @returns {Object|null} 解析結果
  */
 function parseSingleTiradsCode(input) {
-  // 提取位置（右側/左側/峽部）
+  // 提取位置（支援簡短輸入：右、左、右側、左側等）
   let location = 'unknown';
-  if (/右側|右葉|右甲/.test(input)) {
-    if (/上極|上/.test(input)) location = 'right upper';
-    else if (/下極|下/.test(input)) location = 'right lower';
-    else location = 'right mid';
-  } else if (/左側|左葉|左甲/.test(input)) {
-    if (/上極|上/.test(input)) location = 'left upper';
-    else if (/下極|下/.test(input)) location = 'left lower';
-    else location = 'left mid';
-  } else if (/峽部|峽/.test(input)) {
+
+  // 先檢查是否有明確的上/中/下位置
+  const hasUpper = /上極|上方|上段/.test(input);
+  const hasLower = /下極|下方|下段/.test(input);
+  const hasMid = /中段|中間|中部/.test(input);
+
+  // 判斷左右
+  if (/^右|右側|右葉|右甲|Rt|RT|right/i.test(input)) {
+    if (hasUpper) location = 'right upper';
+    else if (hasLower) location = 'right lower';
+    else location = 'right mid';  // 預設中段
+  } else if (/^左|左側|左葉|左甲|Lt|LT|left/i.test(input)) {
+    if (hasUpper) location = 'left upper';
+    else if (hasLower) location = 'left lower';
+    else location = 'left mid';  // 預設中段
+  } else if (/峽部|峽|isthmus/i.test(input)) {
     location = 'isthmus';
   }
 
