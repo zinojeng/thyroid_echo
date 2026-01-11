@@ -787,11 +787,13 @@ function parseSingleTiradsCode(input) {
   if (/^右|右側|右葉|右甲|Rt|RT|right/i.test(input)) {
     if (hasUpper) location = 'right upper';
     else if (hasLower) location = 'right lower';
-    else location = 'right mid';  // 預設中段
+    else if (hasMid) location = 'right mid';
+    else location = 'right';  // 預設不加 mid
   } else if (/^左|左側|左葉|左甲|Lt|LT|left/i.test(input)) {
     if (hasUpper) location = 'left upper';
     else if (hasLower) location = 'left lower';
-    else location = 'left mid';  // 預設中段
+    else if (hasMid) location = 'left mid';
+    else location = 'left';  // 預設不加 mid
   } else if (/峽部|峽|isthmus/i.test(input)) {
     location = 'isthmus';
   }
