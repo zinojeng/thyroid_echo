@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.6.0';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -21,6 +21,7 @@ const APP_VERSION = '1.5.1';
 // 1.4.1 - WebApp 顯示區也使用新術語格式 (echogenicity/echotexture/vascularity)
 // 1.5.0 - Impression 中每個結節顯示個別 FNA 建議 (依 ACR TI-RADS 2017)
 // 1.5.1 - 移除多餘的整體 Recommendation（每個結節已有個別建議）
+// 1.6.0 - 新增甲狀腺疾病診斷識別 (Autoimmune thyroid disease, Hashimoto's, Graves', etc.)
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -250,6 +251,12 @@ function processMixedMode(input, options) {
     }
   }
 
+  // 解析甲狀腺疾病診斷
+  const diagnoses = parseThyroidDiagnoses(input);
+  if (diagnoses.length > 0) {
+    result.diagnoses = diagnoses;
+  }
+
   // 生成綜合印象
   result.impression = generateMixedImpression(result);
 
@@ -315,6 +322,12 @@ function generateMixedImpression(result) {
     });
     lines.push(`${itemNum}) Nodules:`);
     lines.push(...noduleLines);
+    itemNum++;
+  }
+
+  // 診斷印象
+  if (result.diagnoses && result.diagnoses.length > 0) {
+    lines.push(`${itemNum}) Diagnosis: ${result.diagnoses.join('; ')}.`);
   }
 
   return lines.join('\n') || 'No findings';

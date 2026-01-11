@@ -1413,3 +1413,78 @@ function parseComplexSingleLobe(input) {
 
   return result;
 }
+
+// ==================== 甲狀腺疾病診斷 ====================
+
+/**
+ * 甲狀腺疾病診斷術語對照
+ */
+const THYROID_DIAGNOSIS_TERMS = {
+  // 自體免疫性甲狀腺疾病
+  '自體免疫性甲狀腺疾病': 'Autoimmune thyroid disease',
+  '自體免疫性的甲狀腺疾病': 'Autoimmune thyroid disease',
+  '自體免疫甲狀腺炎': 'Autoimmune thyroiditis',
+  '自身免疫性甲狀腺疾病': 'Autoimmune thyroid disease',
+  'autoimmune thyroid disease': 'Autoimmune thyroid disease',
+  'autoimmune thyroiditis': 'Autoimmune thyroiditis',
+
+  // 橋本氏甲狀腺炎
+  '橋本氏甲狀腺炎': "Hashimoto's thyroiditis",
+  '橋本甲狀腺炎': "Hashimoto's thyroiditis",
+  '慢性淋巴球性甲狀腺炎': "Hashimoto's thyroiditis",
+  "hashimoto's thyroiditis": "Hashimoto's thyroiditis",
+  'hashimoto thyroiditis': "Hashimoto's thyroiditis",
+
+  // 葛瑞夫茲病 / 格雷夫斯病
+  '葛瑞夫茲病': "Graves' disease",
+  '格雷夫斯病': "Graves' disease",
+  '瀰漫性毒性甲狀腺腫': "Graves' disease",
+  "graves' disease": "Graves' disease",
+  'graves disease': "Graves' disease",
+
+  // 甲狀腺腫
+  '甲狀腺腫': 'Goiter',
+  '甲狀腺腫大': 'Goiter',
+  '多結節性甲狀腺腫': 'Multinodular goiter',
+  'goiter': 'Goiter',
+  'multinodular goiter': 'Multinodular goiter',
+  'mng': 'Multinodular goiter',
+
+  // 甲狀腺炎
+  '亞急性甲狀腺炎': 'Subacute thyroiditis',
+  '德乾甲狀腺炎': 'De Quervain thyroiditis',
+  'subacute thyroiditis': 'Subacute thyroiditis',
+  "de quervain's thyroiditis": 'De Quervain thyroiditis'
+};
+
+/**
+ * 解析輸入中的甲狀腺疾病診斷
+ * @param {string} input - 輸入文字
+ * @returns {string[]} 診斷列表
+ */
+function parseThyroidDiagnoses(input) {
+  const diagnoses = [];
+  const lowerInput = input.toLowerCase();
+
+  for (const [term, diagnosis] of Object.entries(THYROID_DIAGNOSIS_TERMS)) {
+    if (lowerInput.includes(term.toLowerCase())) {
+      if (!diagnoses.includes(diagnosis)) {
+        diagnoses.push(diagnosis);
+      }
+    }
+  }
+
+  return diagnoses;
+}
+
+/**
+ * 檢查輸入是否包含診斷描述
+ * @param {string} input - 輸入文字
+ * @returns {boolean}
+ */
+function hasDiagnosis(input) {
+  const lowerInput = input.toLowerCase();
+  return Object.keys(THYROID_DIAGNOSIS_TERMS).some(term =>
+    lowerInput.includes(term.toLowerCase())
+  );
+}
