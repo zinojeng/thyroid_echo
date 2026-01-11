@@ -291,7 +291,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Thyroid Echo Report <span style="font-size: 12px; opacity: 0.7;">v1.4.0</span></h1>
+    <h1>Thyroid Echo Report <span style="font-size: 12px; opacity: 0.7;">v1.4.1</span></h1>
 
     <!-- Settings Card -->
     <div class="card settings-card">
@@ -605,12 +605,13 @@
       return formatLobeFromData(lobeData);
     }
 
-    // 從資料格式化葉描述
+    // 從資料格式化葉描述 (使用 ACR TI-RADS 術語)
     function formatLobeFromData(lobe) {
       if (!lobe) return 'N/A';
 
       const parts = [];
 
+      // 尺寸
       if (lobe.dimensions) {
         const d = lobe.dimensions;
         if (d.height) {
@@ -622,20 +623,35 @@
       if (lobe.thickness_cm) {
         parts.push(`${lobe.thickness_cm} cm`);
       }
+
+      // 體積 (只有三維度時才顯示)
       if (lobe.volume_ml) {
         parts.push(`(vol ${lobe.volume_ml} mL)`);
       }
-      if (lobe.homogeneity) {
-        parts.push(lobe.homogeneity);
-      }
+
+      // 分號分隔的特徵描述
+      const features = [];
+
+      // Echogenicity (明暗度)
       if (lobe.echogenicity) {
-        parts.push(lobe.echogenicity);
-      }
-      if (lobe.vascularity) {
-        parts.push(`vascularity ${lobe.vascularity}`);
+        features.push(`echogenicity: ${lobe.echogenicity}`);
       }
 
-      return parts.join(', ') || 'N/A';
+      // Echotexture (均勻度)
+      if (lobe.homogeneity) {
+        features.push(`echotexture: ${lobe.homogeneity}`);
+      }
+
+      // Vascularity (血流)
+      if (lobe.vascularity) {
+        features.push(`vascularity: ${lobe.vascularity}`);
+      }
+
+      if (features.length > 0) {
+        parts.push('; ' + features.join('; '));
+      }
+
+      return parts.join(' ') || 'N/A';
     }
 
     // Copy report

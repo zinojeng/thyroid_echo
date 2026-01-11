@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -18,6 +18,7 @@ const APP_VERSION = '1.4.0';
 // 1.3.3 - 支援葉的兩維度尺寸解析 (只有長×寬時顯示尺寸不計算體積)
 // 1.4.0 - 修正術語：echogenicity(明暗) vs echotexture(均勻度)；
 //         更新 FNA 建議依據 ACR TI-RADS 2017 White Paper 標準
+// 1.4.1 - WebApp 顯示區也使用新術語格式 (echogenicity/echotexture/vascularity)
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
