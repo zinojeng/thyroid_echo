@@ -395,3 +395,99 @@ function createNoduleAssessment(params) {
     recommendation
   };
 }
+
+/**
+ * 測試葉描述解析功能
+ */
+function testLobeParser() {
+  const testCases = [
+    // 右葉測試
+    { input: '右葉 4.5x1.8x1.5 均質 等回音 血流正常', expected: { type: 'right', hasVolume: true } },
+    { input: 'Right lobe 5.0x2.0x1.8 heterogeneous hypoechoic increased vascularity', expected: { type: 'right', homogeneity: 'heterogeneous' } },
+
+    // 左葉測試
+    { input: '左葉 4.2x1.6x1.4 均勻 正常 血流正常', expected: { type: 'left', hasVolume: true } },
+    { input: 'Left 4.0x1.5x1.2 homogeneous isoechoic normal', expected: { type: 'left', echogenicity: 'isoechoic' } },
+
+    // 峽部測試
+    { input: '峽部 0.3cm 正常', expected: { type: 'isthmus', thickness_cm: 0.3 } },
+    { input: 'Isthmus 0.4 normal vascularity normal', expected: { type: 'isthmus', thickness_cm: 0.4 } }
+  ];
+
+  const results = { passed: 0, failed: 0, errors: [] };
+
+  testCases.forEach((tc, index) => {
+    try {
+      const parsed = parseSingleLobeInput(tc.input);
+
+      if (!parsed) {
+        results.failed++;
+        results.errors.push({ test: index + 1, input: tc.input, error: 'Parse returned null' });
+        console.log(`✗ Test ${index + 1} failed: parse returned null`);
+        return;
+      }
+
+      let passed = true;
+
+      if (tc.expected.type && parsed.type !== tc.expected.type) {
+        passed = false;
+      }
+      if (tc.expected.hasVolume && !parsed.volume_ml) {
+        passed = false;
+      }
+      if (tc.expected.homogeneity && parsed.homogeneity !== tc.expected.homogeneity) {
+        passed = false;
+      }
+      if (tc.expected.echogenicity && parsed.echogenicity !== tc.expected.echogenicity) {
+        passed = false;
+      }
+      if (tc.expected.thickness_cm && parsed.thickness_cm !== tc.expected.thickness_cm) {
+        passed = false;
+      }
+
+      if (passed) {
+        results.passed++;
+        console.log(`✓ Test ${index + 1} passed`);
+      } else {
+        results.failed++;
+        results.errors.push({ test: index + 1, input: tc.input, expected: tc.expected, actual: parsed });
+        console.log(`✗ Test ${index + 1} failed`);
+      }
+    } catch (err) {
+      results.failed++;
+      results.errors.push({ test: index + 1, input: tc.input, error: err.message });
+      console.log(`✗ Test ${index + 1} error: ${err.message}`);
+    }
+  });
+
+  console.log(`\n========================================`);
+  console.log(`Lobe Parser Test Results: ${results.passed} passed, ${results.failed} failed`);
+  console.log(`========================================`);
+
+  return results;
+}
+
+/**
+ * 測試完整葉描述輸出
+ */
+function testLobeFormatting() {
+  // 測試多葉輸入
+  const multiLobeInput = '右葉 4.5x1.8x1.5 均質 等回音 血流正常; 左葉 4.2x1.6x1.4 均勻 正常 血流正常; 峽部 0.3cm 正常 血流正常';
+
+  const lobes = parseLobeInput(multiLobeInput);
+  console.log('Parsed lobes:', JSON.stringify(lobes, null, 2));
+
+  if (lobes) {
+    const formatted = formatLobeDescription(lobes);
+    console.log('Formatted output:', JSON.stringify(formatted, null, 2));
+
+    // 驗證
+    if (lobes.rightLobe && lobes.leftLobe && lobes.isthmus) {
+      console.log('✓ All three lobes parsed successfully');
+      return { success: true, lobes, formatted };
+    }
+  }
+
+  console.log('✗ Failed to parse all lobes');
+  return { success: false };
+}

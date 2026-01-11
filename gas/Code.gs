@@ -61,10 +61,16 @@ function processReportFromWeb(input, apiKey, provider) {
  * 請求格式：
  * {
  *   "input": "右上 1.2 2 2 3 0 0",  // 必填：輸入文字
- *   "mode": "numeric",              // 選填：'numeric' 或 'natural'（自動偵測）
+ *   "mode": "numeric",              // 選填：'numeric'、'tirads_code'、'lobe'、'natural'（自動偵測）
  *   "api_key": "xai-xxx...",        // 自然語言模式必填：API Key
  *   "provider": "grok"              // 選填：'grok'、'openai'、'gemini'（自動偵測）
  * }
+ *
+ * 支援的模式：
+ * - numeric: 數字快速模式 (右上 1.2 2 2 3 0 0)
+ * - tirads_code: TIRADS 代碼模式 (右側甲狀腺結節2.1x1.2x2.3，TIRADS 12001)
+ * - lobe: 甲狀腺葉描述模式 (右葉 4.5x1.8x1.5 均質 等回音 血流正常)
+ * - natural: 自然語言模式（需要 API Key）
  *
  * 支援的 API Key 格式：
  * - xAI Grok: xai-xxx...（推薦，CP值最高）
@@ -103,13 +109,13 @@ function doPost(e) {
 /**
  * 處理報告主邏輯
  * @param {string} input - 輸入文字
- * @param {string} mode - 模式 ('numeric', 'tirads_code', 'natural', 或 undefined 自動偵測)
+ * @param {string} mode - 模式 ('numeric', 'tirads_code', 'lobe', 'natural', 或 undefined 自動偵測)
  * @param {Object} options - 選項
  * @returns {Object} 結構化報告
  */
 function processReport(input, mode, options) {
   // 自動偵測模式
-  const detectedMode = mode || detectInputMode(input);
+  const detectedMode = mode || detectInputModeExtended(input);
 
   let result;
 
@@ -119,6 +125,9 @@ function processReport(input, mode, options) {
   } else if (detectedMode === 'tirads_code') {
     // TIRADS 代碼模式：本地解析，不需要 LLM（最快！）
     result = processTiradsCodeMode(input);
+  } else if (detectedMode === 'lobe') {
+    // 葉描述模式：本地解析，不需要 LLM
+    result = processLobeMode(input);
   } else {
     // 自然語言模式：使用 Groq LLM
     result = processNaturalMode(input, options);
@@ -128,10 +137,85 @@ function processReport(input, mode, options) {
   result.metadata = {
     mode: detectedMode,
     processed_at: new Date().toISOString(),
-    api_version: '1.1.0'
+    api_version: '1.2.0'
   };
 
   return result;
+}
+
+/**
+ * 擴展的輸入模式偵測（包含 lobe 模式）
+ * @param {string} input - 輸入文字
+ * @returns {string} 'numeric', 'tirads_code', 'lobe', 或 'natural'
+ */
+function detectInputModeExtended(input) {
+  // 先檢測是否為葉描述
+  if (isLobeInput(input)) {
+    return 'lobe';
+  }
+  // 使用原有的偵測邏輯
+  return detectInputMode(input);
+}
+
+/**
+ * 處理甲狀腺葉描述模式
+ * @param {string} input - 輸入文字
+ * @returns {Object} 結構化報告
+ */
+function processLobeMode(input) {
+  const lobes = parseLobeInput(input);
+
+  if (!lobes) {
+    throw new Error('Unable to parse lobe description. Expected format: 右葉 4.5x1.8x1.5 均質 等回音 血流正常');
+  }
+
+  // 格式化輸出
+  const formatted = formatLobeDescription(lobes);
+
+  return {
+    success: true,
+    type: 'lobe_description',
+    lobes: lobes,
+    formatted: formatted,
+    impression: generateLobeImpression(lobes)
+  };
+}
+
+/**
+ * 生成葉描述的印象
+ * @param {Object} lobes - 葉資料
+ * @returns {string} 印象描述
+ */
+function generateLobeImpression(lobes) {
+  const parts = [];
+
+  if (lobes.rightLobe) {
+    const rl = lobes.rightLobe;
+    let desc = 'Right lobe';
+    if (rl.volume_ml) desc += ` (${rl.volume_ml} mL)`;
+    if (rl.homogeneity) desc += `: ${rl.homogeneity}`;
+    if (rl.echogenicity) desc += `, ${rl.echogenicity}`;
+    parts.push(desc);
+  }
+
+  if (lobes.leftLobe) {
+    const ll = lobes.leftLobe;
+    let desc = 'Left lobe';
+    if (ll.volume_ml) desc += ` (${ll.volume_ml} mL)`;
+    if (ll.homogeneity) desc += `: ${ll.homogeneity}`;
+    if (ll.echogenicity) desc += `, ${ll.echogenicity}`;
+    parts.push(desc);
+  }
+
+  if (lobes.isthmus) {
+    const is = lobes.isthmus;
+    let desc = 'Isthmus';
+    if (is.thickness_cm) desc += ` ${is.thickness_cm} cm`;
+    if (is.echogenicity) desc += `: ${is.echogenicity}`;
+    parts.push(desc);
+  }
+
+  return parts.join('; ') || 'No lobe information';
 }
 
 /**
@@ -470,8 +554,14 @@ function runAllTests() {
   console.log('\n--- Multi-Nodule Tests ---');
   const multiResults = testMultiNodule();
 
-  const totalPassed = numericResults.passed + validationResults.passed + (multiResults.passed ? 1 : 0);
-  const totalFailed = numericResults.failed + validationResults.failed + (multiResults.passed ? 0 : 1);
+  console.log('\n--- Lobe Parser Tests ---');
+  const lobeResults = testLobeParser();
+
+  console.log('\n--- Lobe Formatting Tests ---');
+  const lobeFormattingResults = testLobeFormatting();
+
+  const totalPassed = numericResults.passed + validationResults.passed + (multiResults.passed ? 1 : 0) + lobeResults.passed + (lobeFormattingResults.success ? 1 : 0);
+  const totalFailed = numericResults.failed + validationResults.failed + (multiResults.passed ? 0 : 1) + lobeResults.failed + (lobeFormattingResults.success ? 0 : 1);
 
   console.log('\n========================================');
   console.log(`TOTAL: ${totalPassed} passed, ${totalFailed} failed`);
@@ -481,8 +571,34 @@ function runAllTests() {
     numeric: numericResults,
     validation: validationResults,
     multiNodule: multiResults,
+    lobeParser: lobeResults,
+    lobeFormatting: lobeFormattingResults,
     summary: { passed: totalPassed, failed: totalFailed }
   };
+}
+
+/**
+ * 測試葉描述模式
+ */
+function testLobeMode() {
+  console.log('=== Testing Lobe Mode ===\n');
+
+  const testCases = [
+    '右葉 4.5x1.8x1.5 均質 等回音 血流正常',
+    '左葉 4.2x1.6x1.4 均勻 正常 血流正常',
+    '峽部 0.3cm 正常 血流正常',
+    '右葉 4.5x1.8x1.5 均質 等回音 血流正常; 左葉 4.2x1.6x1.4 均勻 正常 血流正常; 峽部 0.3cm 正常'
+  ];
+
+  testCases.forEach((input, index) => {
+    console.log(`\nTest ${index + 1}: ${input}`);
+    try {
+      const result = processReport(input, 'lobe', {});
+      console.log('Result:', JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.log('Error:', err.message);
+    }
+  });
 }
 
 /**

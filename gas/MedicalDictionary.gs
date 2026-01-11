@@ -495,6 +495,117 @@ const ABBREVIATIONS = {
   'TR5': 'TI-RADS 5 (高度可疑)'
 };
 
+// ===== Lobe Description Terms =====
+
+// 均質性術語對照
+const HOMOGENEITY_TERMS = {
+  // 均質 (homogeneous)
+  '均質': 'homogeneous',
+  '均勻': 'homogeneous',
+  '均質性': 'homogeneous',
+  '均勻回音': 'homogeneous',
+  '回音均勻': 'homogeneous',
+  '紋理均勻': 'homogeneous',
+  '質地均勻': 'homogeneous',
+  '結構均勻': 'homogeneous',
+  'homogeneous': 'homogeneous',
+  'uniform': 'homogeneous',
+  'homogenous': 'homogeneous',
+
+  // 不均質 (heterogeneous)
+  '不均質': 'heterogeneous',
+  '不均勻': 'heterogeneous',
+  '非均質': 'heterogeneous',
+  '回音不均': 'heterogeneous',
+  '回音不均勻': 'heterogeneous',
+  '紋理不均': 'heterogeneous',
+  '質地不均': 'heterogeneous',
+  '結構不均': 'heterogeneous',
+  '粗糙': 'heterogeneous',
+  '雜亂': 'heterogeneous',
+  'heterogeneous': 'heterogeneous',
+  'inhomogeneous': 'heterogeneous',
+  'non-homogeneous': 'heterogeneous',
+  'coarse': 'heterogeneous'
+};
+
+// 甲狀腺葉回音性術語（不同於結節回音性）
+const LOBE_ECHOGENICITY_TERMS = {
+  // 正常/等回音 (normal/isoechoic)
+  '正常': 'isoechoic',
+  '正常回音': 'isoechoic',
+  '回音正常': 'isoechoic',
+  '等回音': 'isoechoic',
+  '等回聲': 'isoechoic',
+  'normal': 'isoechoic',
+  'normal echogenicity': 'isoechoic',
+  'isoechoic': 'isoechoic',
+
+  // 低回音 (hypoechoic)
+  '低回音': 'hypoechoic',
+  '低回聲': 'hypoechoic',
+  '減低': 'hypoechoic',
+  '回音減低': 'hypoechoic',
+  '偏低': 'hypoechoic',
+  '回音偏低': 'hypoechoic',
+  'hypoechoic': 'hypoechoic',
+  'decreased': 'hypoechoic',
+  'decreased echogenicity': 'hypoechoic',
+  'reduced': 'hypoechoic',
+
+  // 高回音 (hyperechoic)
+  '高回音': 'hyperechoic',
+  '高回聲': 'hyperechoic',
+  '增強': 'hyperechoic',
+  '回音增強': 'hyperechoic',
+  'hyperechoic': 'hyperechoic',
+  'increased echogenicity': 'hyperechoic'
+};
+
+// 血流術語對照
+const VASCULARITY_TERMS = {
+  // 正常 (normal)
+  '正常': 'normal',
+  '血流正常': 'normal',
+  '正常血流': 'normal',
+  '血管正常': 'normal',
+  'normal': 'normal',
+  'normal vascularity': 'normal',
+  'normal blood flow': 'normal',
+
+  // 增加 (increased)
+  '增加': 'increased',
+  '增多': 'increased',
+  '血流增加': 'increased',
+  '血流豐富': 'increased',
+  '血流增多': 'increased',
+  '血管增加': 'increased',
+  '血流旺盛': 'increased',
+  '充血': 'increased',
+  '高血流': 'increased',
+  '豐富血流': 'increased',
+  'increased': 'increased',
+  'increased vascularity': 'increased',
+  'hypervascular': 'increased',
+  'hyperemic': 'increased',
+  'rich blood flow': 'increased',
+
+  // 減少 (decreased)
+  '減少': 'decreased',
+  '減低': 'decreased',
+  '血流減少': 'decreased',
+  '血流減低': 'decreased',
+  '血流稀少': 'decreased',
+  '血管減少': 'decreased',
+  '低血流': 'decreased',
+  '血流不足': 'decreased',
+  'decreased': 'decreased',
+  'decreased vascularity': 'decreased',
+  'hypovascular': 'decreased',
+  'reduced blood flow': 'decreased',
+  'poor vascularity': 'decreased'
+};
+
 // 中文數字對照
 const CHINESE_NUMBERS = {
   '零': 0, '〇': 0,
@@ -903,4 +1014,237 @@ function parseSingleTiradsCode(input) {
   }
 
   return result;
+}
+
+// ===== Lobe Parsing Functions =====
+
+/**
+ * 解析甲狀腺葉描述輸入
+ * 格式: "Right 4.5x1.8x1.5 均勻 等回音 血流正常"
+ * 或: "右葉 4.5x1.8x1.5cm 均質 等回聲 正常血流"
+ * 或: "Isthmus 0.3cm 正常"
+ * @param {string} input - 輸入文字
+ * @returns {Object|null} 甲狀腺葉描述結果
+ */
+function parseLobeInput(input) {
+  const normalized = normalizeInput(input);
+
+  // 嘗試分割多個葉描述（以分號或換行分隔）
+  const parts = normalized.split(/[;；\r\n]+/).map(s => s.trim()).filter(s => s);
+
+  const lobes = {
+    rightLobe: null,
+    leftLobe: null,
+    isthmus: null
+  };
+
+  for (const part of parts) {
+    const lobe = parseSingleLobeInput(part);
+    if (lobe) {
+      if (lobe.type === 'right') lobes.rightLobe = lobe;
+      else if (lobe.type === 'left') lobes.leftLobe = lobe;
+      else if (lobe.type === 'isthmus') lobes.isthmus = lobe;
+    }
+  }
+
+  // 如果至少解析到一個葉，返回結果
+  if (lobes.rightLobe || lobes.leftLobe || lobes.isthmus) {
+    return lobes;
+  }
+
+  return null;
+}
+
+/**
+ * 解析單個甲狀腺葉描述
+ * @param {string} input - 單個葉描述
+ * @returns {Object|null} 解析結果
+ */
+function parseSingleLobeInput(input) {
+  // 判斷葉的類型
+  let type = null;
+
+  if (/^右|右葉|右側|right\s*lobe|right/i.test(input)) {
+    type = 'right';
+  } else if (/^左|左葉|左側|left\s*lobe|left/i.test(input)) {
+    type = 'left';
+  } else if (/^峽|峽部|isthmus/i.test(input)) {
+    type = 'isthmus';
+  }
+
+  if (!type) return null;
+
+  const result = { type };
+
+  // 提取尺寸（右葉和左葉為 L×W×H，峽部為單一厚度）
+  if (type === 'isthmus') {
+    // 峽部：只有厚度 (單一數字)
+    const thicknessMatch = input.match(/(\d+\.?\d*)\s*(?:cm|公分)?/);
+    if (thicknessMatch) {
+      result.thickness_cm = parseFloat(thicknessMatch[1]);
+    }
+  } else {
+    // 右葉/左葉：L×W×H
+    const dimMatch = input.match(/(\d+\.?\d*)\s*[x×\*]\s*(\d+\.?\d*)\s*[x×\*]\s*(\d+\.?\d*)/i);
+    if (dimMatch) {
+      const [, l, w, h] = dimMatch;
+      result.dimensions = {
+        length: parseFloat(l),
+        width: parseFloat(w),
+        height: parseFloat(h)
+      };
+      // 計算體積: V = 0.524 × L × W × H (mL)
+      result.volume_ml = Math.round(0.524 * result.dimensions.length * result.dimensions.width * result.dimensions.height * 100) / 100;
+    } else {
+      // 嘗試匹配 L×W 格式
+      const dim2Match = input.match(/(\d+\.?\d*)\s*[x×\*]\s*(\d+\.?\d*)/i);
+      if (dim2Match) {
+        const [, l, w] = dim2Match;
+        result.dimensions = {
+          length: parseFloat(l),
+          width: parseFloat(w)
+        };
+      }
+    }
+  }
+
+  // 提取均質性 (homogeneity)
+  for (const [term, value] of Object.entries(HOMOGENEITY_TERMS)) {
+    if (input.includes(term) || input.toLowerCase().includes(term.toLowerCase())) {
+      result.homogeneity = value;
+      break;
+    }
+  }
+
+  // 提取回音性 (echogenicity)
+  for (const [term, value] of Object.entries(LOBE_ECHOGENICITY_TERMS)) {
+    if (input.includes(term) || input.toLowerCase().includes(term.toLowerCase())) {
+      result.echogenicity = value;
+      break;
+    }
+  }
+
+  // 提取血流 (vascularity)
+  for (const [term, value] of Object.entries(VASCULARITY_TERMS)) {
+    if (input.includes(term) || input.toLowerCase().includes(term.toLowerCase())) {
+      result.vascularity = value;
+      break;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 格式化甲狀腺葉描述為英文報告格式
+ * @param {Object} lobes - 解析後的葉資料
+ * @returns {Object} 格式化的報告
+ */
+function formatLobeDescription(lobes) {
+  const result = {};
+
+  if (lobes.rightLobe) {
+    result.rightLobe = formatSingleLobe(lobes.rightLobe, 'Right lobe');
+  }
+
+  if (lobes.leftLobe) {
+    result.leftLobe = formatSingleLobe(lobes.leftLobe, 'Left lobe');
+  }
+
+  if (lobes.isthmus) {
+    result.isthmus = formatIsthmus(lobes.isthmus);
+  }
+
+  return result;
+}
+
+/**
+ * 格式化單個甲狀腺葉
+ * @param {Object} lobe - 葉資料
+ * @param {string} label - 標籤 (Right lobe / Left lobe)
+ * @returns {string} 格式化字串
+ */
+function formatSingleLobe(lobe, label) {
+  const parts = [label + ':'];
+
+  // 尺寸和體積
+  if (lobe.dimensions) {
+    const dim = lobe.dimensions;
+    if (dim.height) {
+      parts.push(`${dim.length} x ${dim.width} x ${dim.height} cm`);
+    } else {
+      parts.push(`${dim.length} x ${dim.width} cm`);
+    }
+    if (lobe.volume_ml) {
+      parts.push(`(vol ${lobe.volume_ml} mL)`);
+    }
+    parts.push(';');
+  }
+
+  // 均質性
+  if (lobe.homogeneity) {
+    parts.push(lobe.homogeneity + ',');
+  }
+
+  // 回音性
+  if (lobe.echogenicity) {
+    parts.push(lobe.echogenicity + ',');
+  }
+
+  // 血流
+  if (lobe.vascularity) {
+    parts.push(`vascularity ${lobe.vascularity}`);
+  }
+
+  return parts.join(' ').replace(/,\s*$/, '').replace(/;\s*$/, '');
+}
+
+/**
+ * 格式化峽部
+ * @param {Object} isthmus - 峽部資料
+ * @returns {string} 格式化字串
+ */
+function formatIsthmus(isthmus) {
+  const parts = ['Isthmus:'];
+
+  // 厚度
+  if (isthmus.thickness_cm) {
+    parts.push(`${isthmus.thickness_cm} cm;`);
+  }
+
+  // 回音性
+  if (isthmus.echogenicity) {
+    parts.push(`echogenicity ${isthmus.echogenicity},`);
+  }
+
+  // 血流
+  if (isthmus.vascularity) {
+    parts.push(`vascularity ${isthmus.vascularity}`);
+  }
+
+  return parts.join(' ').replace(/,\s*$/, '').replace(/;\s*$/, '');
+}
+
+/**
+ * 檢測輸入是否為葉描述（而非結節描述）
+ * @param {string} input - 輸入文字
+ * @returns {boolean} 是否為葉描述
+ */
+function isLobeInput(input) {
+  const normalized = normalizeInput(input).toLowerCase();
+
+  // 包含 lobe 關鍵字
+  if (/lobe|葉/.test(normalized)) {
+    // 但不是結節描述（不包含 TIRADS 或 5 位數字分數）
+    if (!/tirads|nodule|結節|\d{5}/.test(normalized)) {
+      return true;
+    }
+  }
+
+  // 峽部且不是結節
+  if (/^峽|^isthmus/i.test(normalized) && !/tirads|nodule|結節|\d{5}/.test(normalized)) {
+    return true;
+  }
+
+  return false;
 }
