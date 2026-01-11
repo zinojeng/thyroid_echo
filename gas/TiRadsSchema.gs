@@ -308,31 +308,87 @@ function validateAndCorrectScores(scores, autoCorrect = true) {
 }
 
 /**
+ * 將數字分數轉換為英文描述文字
+ * @param {Object} scores - {C, E, S, M, F}
+ * @returns {Object} 包含各項描述的物件
+ */
+function scoresToDescription(scores) {
+  const { C, E, S, M, F } = scores;
+
+  return {
+    composition: TIRADS_SCHEMA.composition.options[C]?.description || 'Unknown',
+    echogenicity: TIRADS_SCHEMA.echogenicity.options[E]?.description || 'Unknown',
+    shape: TIRADS_SCHEMA.shape.options[S]?.description || 'Unknown',
+    margin: TIRADS_SCHEMA.margin.options[M]?.description || 'Unknown',
+    echogenicFoci: TIRADS_SCHEMA.echogenicFoci.options[F]?.description || 'Unknown'
+  };
+}
+
+/**
+ * 將分數轉換為報告文字
+ * @param {Object} scores - {C, E, S, M, F}
+ * @returns {string} 英文描述文字
+ */
+function scoresToReportText(scores) {
+  const desc = scoresToDescription(scores);
+  const total = calculateTotalScore(scores.C, scores.E, scores.S, scores.M, scores.F);
+  const category = getTiRadsCategory(total);
+
+  return `${desc.composition}, ${desc.echogenicity}, ` +
+         `${desc.shape}, ${desc.margin}, ` +
+         `${desc.echogenicFoci}. ` +
+         `Total: ${total} points, ${category}`;
+}
+
+// 預設 TI-RADS 分數
+const DEFAULT_TIRADS_SCORES = {
+  C: 2,  // Solid
+  E: 0,  // Anechoic
+  S: 0,  // Wider-than-tall
+  M: 0,  // Smooth
+  F: 0   // None
+};
+
+/**
  * 建立完整的 TI-RADS 評估結果
  * @param {Object} params - {location, sizeCm, C, E, S, M, F}
  * @returns {Object} Complete nodule assessment
  */
 function createNoduleAssessment(params) {
-  const { location, sizeCm, C, E, S, M, F } = params;
-  
+  const { location, sizeCm } = params;
+
+  // 使用預設值填充未提供的分數
+  const C = params.C ?? DEFAULT_TIRADS_SCORES.C;
+  const E = params.E ?? DEFAULT_TIRADS_SCORES.E;
+  const S = params.S ?? DEFAULT_TIRADS_SCORES.S;
+  const M = params.M ?? DEFAULT_TIRADS_SCORES.M;
+  const F = params.F ?? DEFAULT_TIRADS_SCORES.F;
+
   // 驗證分數
   const validation = validateTiRadsScores({ C, E, S, M, F });
   if (!validation.valid) {
     throw new Error(validation.errors.join('; '));
   }
-  
+
   const total = calculateTotalScore(C, E, S, M, F);
   const category = getTiRadsCategory(total);
   const recommendation = getRecommendation(category, sizeCm);
-  
+
   // 標準化位置
   const normalizedLocation = LOCATION_MAP[location] || location;
-  
+
+  // 取得描述文字
+  const desc = scoresToDescription({ C, E, S, M, F });
+
   return {
     location: normalizedLocation,
     size_cm: sizeCm,
     tirads: {
-      C, E, S, M, F,
+      composition: desc.composition,
+      echogenicity: desc.echogenicity,
+      shape: desc.shape,
+      margin: desc.margin,
+      echogenicFoci: desc.echogenicFoci,
       total,
       category
     },

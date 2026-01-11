@@ -102,6 +102,17 @@ function getStructuringPrompt() {
 | 邊緣鈣化、環狀鈣化、rim、peripheral | 2 |
 | 點狀鈣化、微鈣化、microcalcification、punctate | 3 |
 
+## 尺寸與體積計算
+
+輸入尺寸格式範例：
+- "2.1x1.2x2.3" 或 "2.1×1.2×2.3" 或 "2.1*1.2*2.3" → 三個維度
+- "2.1x1.2" → 兩個維度
+- "2.3公分" 或 "2.3cm" → 單一最大徑
+
+體積公式（橢圓體）：V = 0.524 × L × W × H (mL)
+- 如果有三個維度，計算體積
+- 取最大值作為 size_cm（用於 FNA 建議判斷）
+
 ## 輸出 JSON 格式
 
 {
@@ -109,7 +120,13 @@ function getStructuringPrompt() {
     {
       "id": 1,
       "location": "right upper",
-      "size_cm": 1.2,
+      "size_cm": 2.3,
+      "dimensions": {
+        "length": 2.1,
+        "width": 1.2,
+        "height": 2.3
+      },
+      "volume_ml": 3.0,
       "tirads": {
         "C": 2,
         "E": 2,
@@ -121,7 +138,7 @@ function getStructuringPrompt() {
       }
     }
   ],
-  "impression": "TR5 nodule at right upper (1.2cm).",
+  "impression": "TR5 nodule at right upper (2.1x1.2x2.3cm, 3.0mL).",
   "recommendation": "FNA recommended (TR5, ≥1cm)"
 }
 

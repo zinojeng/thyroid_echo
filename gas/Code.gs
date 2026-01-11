@@ -6,18 +6,51 @@
  */
 
 /**
- * 處理 GET 請求（用於測試連線）
+ * 處理 GET 請求 - 顯示 Web App 頁面
  */
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'ok',
-    message: 'Thyroid Echo Report API is running',
-    version: '1.0.0',
-    endpoints: {
-      POST: '/exec - 結構化甲狀腺報告',
-      GET: '/exec - 測試連線'
-    }
-  })).setMimeType(ContentService.MimeType.JSON);
+  // 如果有 api 參數，返回 API 狀態（向後相容）
+  if (e && e.parameter && e.parameter.api === 'status') {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'ok',
+      message: 'Thyroid Echo Report API is running',
+      version: '1.1.0',
+      endpoints: {
+        POST: '/exec - 結構化甲狀腺報告',
+        GET: '/exec - Web App 頁面',
+        GET_STATUS: '/exec?api=status - API 狀態'
+      }
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 返回 Web App HTML 頁面
+  return HtmlService.createHtmlOutputFromFile('WebApp')
+    .setTitle('Thyroid Echo Report')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * 從 Web App 處理報告（供 HTML 頁面呼叫）
+ * @param {string} input - 輸入文字
+ * @param {string} apiKey - API Key
+ * @param {string} provider - Provider
+ * @returns {Object} 結構化報告
+ */
+function processReportFromWeb(input, apiKey, provider) {
+  try {
+    const options = {
+      api_key: apiKey,
+      provider: provider !== 'auto' ? provider : undefined
+    };
+
+    return processReport(input, null, options);
+  } catch (error) {
+    console.error('Web App Error:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 /**
@@ -164,14 +197,8 @@ function processNaturalMode(input, options) {
   // 標準化輸入
   const normalizedInput = normalizeInput(input);
 
-  // 建立 prompt
-  const { systemPrompt, userMessage } = buildPromptWithExamples(normalizedInput);
-
-  // 呼叫 LLM API（傳遞完整 options，包含 api_key 和 provider）
-  const result = callLLMApi(systemPrompt, userMessage, {
-    ...options,
-    temperature: 0.1
-  });
+  // 使用 structureThyroidReport（包含描述轉換）
+  const result = structureThyroidReport(normalizedInput, options);
 
   // 確保有 success 欄位
   result.success = true;
@@ -440,10 +467,21 @@ function setApiKey() {
 }
 
 /**
- * 測試 Groq 連線
+ * 測試 LLM 連線（需要傳入 api_key）
+ * @param {string} apiKey - API Key（可選，用於測試）
  */
-function testConnection() {
-  const result = testGroqConnection();
+function testConnection(apiKey) {
+  // 如果沒有傳入 api_key，顯示使用說明
+  if (!apiKey) {
+    console.log('Usage: testConnection("your-api-key")');
+    console.log('Supported API Keys:');
+    console.log('  - xAI Grok: xai-xxx...');
+    console.log('  - OpenAI: sk-xxx...');
+    console.log('  - Gemini: AIxxx...');
+    return { success: false, error: 'Please provide an API key as parameter' };
+  }
+
+  const result = testLLMConnection({ api_key: apiKey });
   console.log('Connection test:', JSON.stringify(result, null, 2));
   return result;
 }

@@ -4,7 +4,7 @@
  */
 
 // API 端點（寫死）
-const API_URL = 'https://script.google.com/macros/s/AKfycbyEZoSW4SlFTnCoFJBTUBUOfuzwUw2pzRito5STgk9dnK9P_NfEzxc_39MLabowbEaa/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbz8Ruo1LWUzjuqxX1WDLKBwZmIbz5CgJAu4PGnSoKa1aP1s34mVo-OnKCLzntZt64bt/exec';
 
 // DOM 元素
 let elements = {};
@@ -238,13 +238,15 @@ function displayResult(result) {
               <span class="label">大小：</span>
               <span class="value">${nodule.size_cm || 'N/A'} cm</span>
             </div>
-            <div class="nodule-scores">
-              <span class="score">C:${nodule.tirads?.C ?? '-'}</span>
-              <span class="score">E:${nodule.tirads?.E ?? '-'}</span>
-              <span class="score">S:${nodule.tirads?.S ?? '-'}</span>
-              <span class="score">M:${nodule.tirads?.M ?? '-'}</span>
-              <span class="score">F:${nodule.tirads?.F ?? '-'}</span>
-              <span class="score total">= ${nodule.tirads?.total ?? '-'}</span>
+            <div class="nodule-descriptions">
+              <div class="desc-item"><span class="desc-label">Size:</span> ${formatNoduleSize(nodule)}</div>
+              ${nodule.volume_ml ? `<div class="desc-item"><span class="desc-label">Volume:</span> ${nodule.volume_ml} mL</div>` : ''}
+              <div class="desc-item"><span class="desc-label">Composition:</span> ${nodule.tirads?.composition || '-'}</div>
+              <div class="desc-item"><span class="desc-label">Echogenicity:</span> ${nodule.tirads?.echogenicity || '-'}</div>
+              <div class="desc-item"><span class="desc-label">Shape:</span> ${nodule.tirads?.shape || '-'}</div>
+              <div class="desc-item"><span class="desc-label">Margin:</span> ${nodule.tirads?.margin || '-'}</div>
+              <div class="desc-item"><span class="desc-label">Echogenic Foci:</span> ${nodule.tirads?.echogenicFoci || '-'}</div>
+              <div class="desc-item total"><span class="desc-label">Total:</span> ${nodule.tirads?.total ?? '-'} points</div>
             </div>
           </div>
           <div class="nodule-recommendation">
@@ -339,21 +341,48 @@ function copyReport() {
   });
 }
 
+// 格式化結節尺寸
+function formatNoduleSize(nodule) {
+  if (nodule.dimensions) {
+    const d = nodule.dimensions;
+    if (d.length && d.width && d.height) {
+      return `${d.length} x ${d.width} x ${d.height} cm`;
+    } else if (d.length && d.width) {
+      return `${d.length} x ${d.width} cm`;
+    }
+  }
+  return `${nodule.size_cm || 'N/A'} cm`;
+}
+
+// 格式化尺寸文字（用於複製）
+function formatSizeText(nodule) {
+  if (nodule.dimensions) {
+    const d = nodule.dimensions;
+    if (d.length && d.width && d.height) {
+      const vol = nodule.volume_ml ? `, ${nodule.volume_ml} mL` : '';
+      return `${d.length} x ${d.width} x ${d.height} cm${vol}`;
+    } else if (d.length && d.width) {
+      return `${d.length} x ${d.width} cm`;
+    }
+  }
+  return `${nodule.size_cm || ''} cm`;
+}
+
 // 格式化報告文字
 function formatReportText(result) {
   let text = '';
 
   if (result.nodules && result.nodules.length > 0) {
     result.nodules.forEach((nodule, index) => {
-      text += `Nodule ${nodule.id || index + 1}: `;
-      text += `${nodule.location || ''}, ${nodule.size_cm || ''} cm, `;
-      text += `TI-RADS ${nodule.tirads?.category || ''} `;
-      text += `(C${nodule.tirads?.C ?? ''} E${nodule.tirads?.E ?? ''} S${nodule.tirads?.S ?? ''} M${nodule.tirads?.M ?? ''} F${nodule.tirads?.F ?? ''} = ${nodule.tirads?.total ?? ''})\n`;
+      const t = nodule.tirads || {};
+      text += `Nodule ${nodule.id || index + 1}: ${nodule.location || ''}, ${formatSizeText(nodule)}\n`;
+      text += `  ${t.composition || ''}, ${t.echogenicity || ''}, ${t.shape || ''}, ${t.margin || ''}, ${t.echogenicFoci || ''}\n`;
+      text += `  TI-RADS ${t.category || ''} (${t.total ?? ''} points)\n\n`;
     });
   }
 
   if (result.impression) {
-    text += `\nImpression: ${result.impression}\n`;
+    text += `Impression: ${result.impression}\n`;
   }
 
   if (result.recommendation) {

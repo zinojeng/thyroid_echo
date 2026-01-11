@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thyroid Echo Report</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .settings-card {
+      background: #f8f9fa;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 8px 0;
+    }
+
+    .settings-header h3 {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .settings-content {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .settings-content.show {
+      display: block;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-record {
+      background: #10b981;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .btn-record.recording {
+      background: #ef4444;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-group .btn {
+      flex: 1;
+    }
+
+    .result-section {
+      display: none;
+    }
+
+    .result-section.show {
+      display: block;
+    }
+
+    .nodule-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-left: 4px solid #667eea;
+    }
+
+    .nodule-card.tr1 { border-left-color: #10b981; }
+    .nodule-card.tr2 { border-left-color: #34d399; }
+    .nodule-card.tr3 { border-left-color: #fbbf24; }
+    .nodule-card.tr4 { border-left-color: #f97316; }
+    .nodule-card.tr5 { border-left-color: #ef4444; }
+
+    .nodule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .nodule-id {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .nodule-category {
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .tr1 .nodule-category { background: #10b981; }
+    .tr2 .nodule-category { background: #34d399; }
+    .tr3 .nodule-category { background: #fbbf24; color: #000; }
+    .tr4 .nodule-category { background: #f97316; }
+    .tr5 .nodule-category { background: #ef4444; }
+
+    .nodule-info {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    .nodule-info strong {
+      color: #374151;
+    }
+
+    .nodule-desc {
+      font-size: 13px;
+      color: #4b5563;
+      line-height: 1.5;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .nodule-recommendation {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #fef3c7;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #92400e;
+    }
+
+    .impression {
+      background: #eff6ff;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1e40af;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .success {
+      background: #f0fdf4;
+      color: #16a34a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .success.show {
+      display: block;
+    }
+
+    .mic-icon {
+      width: 24px;
+      height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Thyroid Echo Report</h1>
+
+    <!-- Settings Card -->
+    <div class="card settings-card">
+      <div class="settings-header" onclick="toggleSettings()">
+        <h3>API Settings</h3>
+        <span id="settings-toggle">+</span>
+      </div>
+      <div class="settings-content" id="settings-content">
+        <label for="api-key">API Key (Grok/OpenAI/Gemini)</label>
+        <input type="password" id="api-key" placeholder="Enter your API key">
+
+        <label for="provider">Provider</label>
+        <select id="provider">
+          <option value="auto">Auto Detect</option>
+          <option value="grok">xAI Grok</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+
+        <button class="btn btn-secondary" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Input Card -->
+    <div class="card">
+      <div id="error" class="error"></div>
+      <div id="success" class="success"></div>
+
+      <button class="btn btn-record" id="record-btn" onclick="toggleRecording()">
+        <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <span id="record-text">Click to Record</span>
+      </button>
+
+      <label for="transcript">Transcript</label>
+      <textarea id="transcript" placeholder="Voice input will appear here, or type manually..."></textarea>
+
+      <button class="btn btn-primary" id="analyze-btn" onclick="analyzeReport()">
+        Analyze Report
+      </button>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Analyzing...</div>
+      </div>
+    </div>
+
+    <!-- Result Card -->
+    <div class="card result-section" id="result-section">
+      <h3 style="margin-bottom: 16px; color: #374151;">Analysis Result</h3>
+      <div id="result-container"></div>
+
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="copyReport()">Copy</button>
+        <button class="btn btn-secondary" onclick="clearResult()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let isRecording = false;
+    let recognition = null;
+    let currentResult = null;
+    let settings = { apiKey: '', provider: 'auto' };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      initSpeechRecognition();
+    });
+
+    // Load settings from localStorage
+    function loadSettings() {
+      const saved = localStorage.getItem('thyroid_settings');
+      if (saved) {
+        settings = JSON.parse(saved);
+        document.getElementById('api-key').value = settings.apiKey || '';
+        document.getElementById('provider').value = settings.provider || 'auto';
+      }
+    }
+
+    // Save settings
+    function saveSettings() {
+      settings.apiKey = document.getElementById('api-key').value.trim();
+      settings.provider = document.getElementById('provider').value;
+      localStorage.setItem('thyroid_settings', JSON.stringify(settings));
+      showSuccess('Settings saved!');
+      toggleSettings();
+    }
+
+    // Toggle settings panel
+    function toggleSettings() {
+      const content = document.getElementById('settings-content');
+      const toggle = document.getElementById('settings-toggle');
+      content.classList.toggle('show');
+      toggle.textContent = content.classList.contains('show') ? '-' : '+';
+    }
+
+    // Initialize speech recognition
+    function initSpeechRecognition() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('record-btn').disabled = true;
+        document.getElementById('record-text').textContent = 'Speech not supported';
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'zh-TW';
+
+      recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('record-btn').classList.add('recording');
+        document.getElementById('record-text').textContent = 'Recording... Click to Stop';
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        document.getElementById('record-btn').classList.remove('recording');
+        document.getElementById('record-text').textContent = 'Click to Record';
+      };
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          document.getElementById('transcript').value += finalTranscript;
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech error:', event.error);
+        if (event.error === 'not-allowed') {
+          showError('Please allow microphone access');
+        } else {
+          showError('Speech recognition error: ' + event.error);
+        }
+      };
+    }
+
+    // Toggle recording
+    function toggleRecording() {
+      if (!recognition) {
+        showError('Speech recognition not available');
+        return;
+      }
+
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        document.getElementById('transcript').value = '';
+        recognition.start();
+      }
+    }
+
+    // Analyze report
+    function analyzeReport() {
+      const input = document.getElementById('transcript').value.trim();
+
+      if (!input) {
+        showError('Please enter or record some text first');
+        return;
+      }
+
+      // 自動讀取輸入框中的 API Key
+      const inputApiKey = document.getElementById('api-key').value.trim();
+      const inputProvider = document.getElementById('provider').value;
+
+      if (inputApiKey) {
+        settings.apiKey = inputApiKey;
+        settings.provider = inputProvider;
+        localStorage.setItem('thyroid_settings', JSON.stringify(settings));
+      }
+
+      if (!settings.apiKey) {
+        showError('Please set your API key first');
+        toggleSettings();
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      // Call GAS function
+      google.script.run
+        .withSuccessHandler(handleResult)
+        .withFailureHandler(handleError)
+        .processReportFromWeb(input, settings.apiKey, settings.provider);
+    }
+
+    // Handle result
+    function handleResult(result) {
+      showLoading(false);
+
+      if (result.success === false) {
+        showError(result.error || 'Analysis failed');
+        return;
+      }
+
+      currentResult = result;
+      displayResult(result);
+    }
+
+    // Handle error
+    function handleError(error) {
+      showLoading(false);
+      showError('Error: ' + error.message);
+    }
+
+    // Display result
+    function displayResult(result) {
+      document.getElementById('result-section').classList.add('show');
+
+      let html = '';
+
+      if (result.nodules && result.nodules.length > 0) {
+        result.nodules.forEach((nodule, index) => {
+          const category = nodule.tirads?.category || '';
+          const categoryClass = category.toLowerCase().replace('-', '');
+          const t = nodule.tirads || {};
+
+          html += `
+            <div class="nodule-card ${categoryClass}">
+              <div class="nodule-header">
+                <span class="nodule-id">Nodule ${nodule.id || index + 1}</span>
+                <span class="nodule-category">${category}</span>
+              </div>
+              <div class="nodule-info">
+                <strong>Location:</strong> ${nodule.location || 'N/A'}<br>
+                <strong>Size:</strong> ${formatSize(nodule)}<br>
+                ${nodule.volume_ml ? `<strong>Volume:</strong> ${nodule.volume_ml} mL<br>` : ''}
+                <strong>Total:</strong> ${t.total ?? '-'} points
+              </div>
+              <div class="nodule-desc">
+                ${t.composition || ''}, ${t.echogenicity || ''}, ${t.shape || ''}, ${t.margin || ''}, ${t.echogenicFoci || ''}
+              </div>
+              ${nodule.recommendation ? `<div class="nodule-recommendation">${nodule.recommendation}</div>` : ''}
+            </div>
+          `;
+        });
+      }
+
+      if (result.impression) {
+        html += `<div class="impression"><strong>Impression:</strong> ${result.impression}</div>`;
+      }
+
+      document.getElementById('result-container').innerHTML = html;
+    }
+
+    // Copy report
+    function copyReport() {
+      if (!currentResult) {
+        showError('No report to copy');
+        return;
+      }
+
+      const text = formatReportText(currentResult);
+      navigator.clipboard.writeText(text).then(() => {
+        showSuccess('Copied to clipboard!');
+      }).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showSuccess('Copied to clipboard!');
+      });
+    }
+
+    // Format size with dimensions
+    function formatSize(nodule) {
+      if (nodule.dimensions) {
+        const d = nodule.dimensions;
+        if (d.length && d.width && d.height) {
+          return `${d.length} x ${d.width} x ${d.height} cm`;
+        } else if (d.length && d.width) {
+          return `${d.length} x ${d.width} cm`;
+        }
+      }
+      return `${nodule.size_cm || 'N/A'} cm`;
+    }
+
+    // Format size text for copy
+    function formatSizeText(nodule) {
+      if (nodule.dimensions) {
+        const d = nodule.dimensions;
+        if (d.length && d.width && d.height) {
+          const vol = nodule.volume_ml ? `, ${nodule.volume_ml} mL` : '';
+          return `${d.length} x ${d.width} x ${d.height} cm${vol}`;
+        } else if (d.length && d.width) {
+          return `${d.length} x ${d.width} cm`;
+        }
+      }
+      return `${nodule.size_cm || ''} cm`;
+    }
+
+    // Format report text
+    function formatReportText(result) {
+      let text = '';
+
+      if (result.nodules && result.nodules.length > 0) {
+        result.nodules.forEach((nodule, index) => {
+          const t = nodule.tirads || {};
+          text += `Nodule ${nodule.id || index + 1}: ${nodule.location || ''}, ${formatSizeText(nodule)}\n`;
+          text += `  ${t.composition || ''}, ${t.echogenicity || ''}, ${t.shape || ''}, ${t.margin || ''}, ${t.echogenicFoci || ''}\n`;
+          text += `  TI-RADS ${t.category || ''} (${t.total ?? ''} points)\n\n`;
+        });
+      }
+
+      if (result.impression) {
+        text += `Impression: ${result.impression}\n`;
+      }
+
+      if (result.recommendation) {
+        text += `Recommendation: ${result.recommendation}\n`;
+      }
+
+      return text.trim();
+    }
+
+    // Clear result
+    function clearResult() {
+      currentResult = null;
+      document.getElementById('result-container').innerHTML = '';
+      document.getElementById('result-section').classList.remove('show');
+      document.getElementById('transcript').value = '';
+    }
+
+    // Show/hide helpers
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 5000);
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('success');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    function hideMessages() {
+      document.getElementById('error').classList.remove('show');
+      document.getElementById('success').classList.remove('show');
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading').classList.toggle('show', show);
+      document.getElementById('analyze-btn').disabled = show;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "thyroid-echo-report",
+  "version": "1.0.0",
+  "description": "Thyroid Echo Report - ACR TI-RADS 2017 Structured Report Generator",
+  "scripts": {
+    "start": "npx serve -s . -l 3000",
+    "build": "echo 'Static site, no build needed'"
+  },
+  "keywords": ["thyroid", "tirads", "ultrasound", "medical"],
+  "license": "MIT"
+}
