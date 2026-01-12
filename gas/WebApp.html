@@ -577,7 +577,7 @@
       event.target.value = ''; // Reset file input
     }
 
-    // Process audio with Gemini
+    // Process audio with Gemini (transcribe only, user clicks Analyze for structuring)
     async function processAudioWithGemini(audioBlob, mimeType) {
       const apiKey = document.getElementById('api-key').value.trim();
 
@@ -588,11 +588,11 @@
         // Convert blob to base64
         const base64 = await blobToBase64(audioBlob);
 
-        // Call GAS function
+        // Call GAS function - transcribe only, don't analyze yet
         google.script.run
-          .withSuccessHandler(handleAudioResult)
+          .withSuccessHandler(handleTranscribeResult)
           .withFailureHandler(handleError)
-          .processAudioFromWeb(base64, mimeType, apiKey, 'full');
+          .processAudioFromWeb(base64, mimeType, apiKey, 'transcribe');
 
       } catch (error) {
         showLoading(false);
@@ -614,22 +614,22 @@
       });
     }
 
-    // Handle audio processing result
-    function handleAudioResult(result) {
+    // Handle transcription result (only show transcript, don't analyze)
+    function handleTranscribeResult(result) {
       showLoading(false);
 
       if (result.success === false) {
-        showError(result.error || 'Audio processing failed');
+        showError(result.error || 'Transcription failed');
         return;
       }
 
-      // Show transcript if available
+      // Show transcript in textarea
       if (result.transcript) {
         document.getElementById('transcript').value = result.transcript;
+        showSuccess('Transcription complete. Click "Analyze Report" to analyze.');
+      } else {
+        showError('No transcript received from audio.');
       }
-
-      currentResult = result;
-      displayResult(result);
     }
 
     // Analyze report
