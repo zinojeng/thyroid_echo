@@ -129,12 +129,99 @@ function callOpenAICompatibleApi(provider, apiKey, systemPrompt, userMessage, op
     const result = JSON.parse(responseText);
     const content = result.choices[0].message.content;
 
-    return JSON.parse(content);
+    // 使用強健的 JSON 解析
+    return robustJsonParse(content);
 
   } catch (error) {
     console.error(`${provider.name} API call failed:`, error);
     throw error;
   }
+}
+
+/**
+ * 強健的 JSON 解析函數（處理 LLM 回傳的各種格式問題）
+ * @param {string} content - LLM 回傳的文字內容
+ * @returns {Object} 解析後的 JSON 物件
+ */
+function robustJsonParse(content) {
+  if (!content || typeof content !== 'string') {
+    throw new Error('Empty or invalid content');
+  }
+
+  // 1. 先嘗試直接解析
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    // 繼續嘗試修復
+  }
+
+  // 2. 移除 markdown 代碼區塊標記
+  let cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // 繼續嘗試修復
+  }
+
+  // 3. 嘗試提取 JSON 物件 {...}
+  const jsonObjectMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonObjectMatch) {
+    let jsonStr = jsonObjectMatch[0];
+
+    // 4. 修復常見的 JSON 格式問題
+    // 4a. 將單引號轉換為雙引號（但要小心字串內的單引號）
+    jsonStr = jsonStr.replace(/'/g, '"');
+
+    // 4b. 移除尾部逗號 (trailing commas)
+    jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+
+    // 4c. 為未加引號的屬性名加上引號
+    jsonStr = jsonStr.replace(/(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+
+    // 4d. 修復數字後面直接跟屬性名的情況
+    jsonStr = jsonStr.replace(/(\d)\s+([a-zA-Z_])/g, '$1, "$2');
+
+    try {
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      // 繼續嘗試其他方法
+    }
+  }
+
+  // 5. 嘗試提取 JSON 陣列 [...]
+  const jsonArrayMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (jsonArrayMatch) {
+    let jsonStr = jsonArrayMatch[0];
+    jsonStr = jsonStr.replace(/'/g, '"');
+    jsonStr = jsonStr.replace(/,\s*]/g, ']');
+
+    try {
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      // 繼續嘗試其他方法
+    }
+  }
+
+  // 6. 最後嘗試：使用 Function 構造器（注意：這有安全風險，僅用於信任的 LLM 輸出）
+  try {
+    // 移除可能導致問題的字元
+    let safeContent = cleaned
+      .replace(/[\x00-\x1f]/g, ' ')  // 移除控制字元
+      .replace(/\n/g, '\\n')         // 轉義換行
+      .replace(/\r/g, '\\r')         // 轉義回車
+      .replace(/\t/g, '\\t');        // 轉義 tab
+
+    const jsonMatch = safeContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch (e) {
+    // 最後的錯誤
+  }
+
+  // 如果所有嘗試都失敗，拋出錯誤並附上原始內容的前 200 字
+  throw new Error(`Unable to parse JSON. Content preview: ${content.substring(0, 200)}...`);
 }
 
 /**
@@ -181,19 +268,8 @@ function callGeminiApi(provider, apiKey, systemPrompt, userMessage, options) {
     const result = JSON.parse(responseText);
     const content = result.candidates[0].content.parts[0].text;
 
-    // 嘗試解析 JSON
-    try {
-      return JSON.parse(content);
-    } catch (e) {
-      // Gemini 有時會在 JSON 前後加入 markdown 標記
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1]);
-      }
-      // 嘗試直接解析
-      const cleanContent = content.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleanContent);
-    }
+    // 使用強健的 JSON 解析
+    return robustJsonParse(content);
 
   } catch (error) {
     console.error('Gemini API call failed:', error);
@@ -263,8 +339,8 @@ function callGeminiAudioApi(audioBase64, mimeType, prompt, options = {}) {
     const result = JSON.parse(responseText);
     const content = result.candidates[0].content.parts[0].text;
 
-    // 嘗試解析 JSON
-    return parseGeminiJsonResponse(content);
+    // 使用強健的 JSON 解析
+    return robustJsonParse(content);
 
   } catch (error) {
     console.error('Gemini Audio API call failed:', error);
