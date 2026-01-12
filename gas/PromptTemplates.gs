@@ -305,6 +305,119 @@ function getFewShotExamples() {
         impression: 'TR5 nodule at right upper (1.0cm); TR1 nodule at left lower (0.5cm).',
         recommendation: 'FNA recommended (TR5, ≥1cm)'
       }
+    },
+    // ==================== LangExtract 風格：混合格式範例 ====================
+    // 範例 9: 中英混合 - Lobe + Nodule 描述
+    {
+      input: '右側甲狀腺的lobe是1乘2乘3, isoechoic hypervascularity, left lobe是1乘2乘5, isoechoic isovascularity, left lobe have a nodule, 1乘1乘3, TIRADS 21022',
+      output: {
+        lobes: {
+          rightLobe: {
+            type: 'right',
+            dimensions: { length: 1, width: 2, height: 3 },
+            volume_ml: 3.14,
+            echogenicity: 'isoechoic',
+            homogeneity: 'homogeneous',
+            vascularity: 'increased'
+          },
+          leftLobe: {
+            type: 'left',
+            dimensions: { length: 1, width: 2, height: 5 },
+            volume_ml: 5.24,
+            echogenicity: 'isoechoic',
+            homogeneity: 'homogeneous',
+            vascularity: 'normal'
+          }
+        },
+        nodules: [{
+          id: 1,
+          location: 'left lobe',
+          size_cm: 3,
+          dimensions: { length: 1, width: 1, height: 3 },
+          volume_ml: 1.57,
+          tirads: { C: 2, E: 1, S: 0, M: 2, F: 2, total: 7, category: 'TR5' }
+        }],
+        impression: 'Right lobe: 1x2x3cm (3.14mL), isoechoic, increased vascularity. Left lobe: 1x2x5cm (5.24mL), isoechoic, normal vascularity. TR5 nodule at left lobe (1x1x3cm, 3.0cm max).',
+        recommendation: 'FNA recommended (TR5, ≥1cm)'
+      }
+    },
+    // 範例 10: 口語化輸入 - 尺寸用「乘」
+    {
+      input: 'right lobe 4乘1.5乘2 homogeneous isoechoic normal vascularity, 有一顆 nodule 0.8乘0.6乘0.5 solid hypoechoic smooth no calcification',
+      output: {
+        lobes: {
+          rightLobe: {
+            type: 'right',
+            dimensions: { length: 4, width: 1.5, height: 2 },
+            volume_ml: 6.29,
+            echogenicity: 'isoechoic',
+            homogeneity: 'homogeneous',
+            vascularity: 'normal'
+          }
+        },
+        nodules: [{
+          id: 1,
+          location: 'right lobe',
+          size_cm: 0.8,
+          dimensions: { length: 0.8, width: 0.6, height: 0.5 },
+          volume_ml: 0.13,
+          tirads: { C: 2, E: 2, S: 0, M: 0, F: 0, total: 4, category: 'TR4' }
+        }],
+        impression: 'Right lobe: 4x1.5x2cm (6.29mL), isoechoic, normal vascularity. TR4 nodule at right lobe (0.8cm).',
+        recommendation: 'No FNA needed (TR4, <1cm)'
+      }
+    },
+    // 範例 11: TIRADS 代碼格式（空格分隔）
+    {
+      input: 'left upper nodule 1.2cm TIRADS 22 00 3',
+      output: {
+        nodules: [{
+          id: 1,
+          location: 'left upper',
+          size_cm: 1.2,
+          tirads: { C: 2, E: 2, S: 0, M: 0, F: 3, total: 7, category: 'TR5' }
+        }],
+        impression: 'TR5 nodule at left upper (1.2cm).',
+        recommendation: 'FNA recommended (TR5, ≥1cm)'
+      }
+    },
+    // 範例 12: 完整雙側葉描述 + 多結節
+    {
+      input: '右葉4.5x1.8x1.5均質等回音血流正常, 左葉4.2x1.6x1.4均質正常血流正常, 峽部0.3cm正常, 右上有結節1.0 solid hypoechoic wider-than-tall smooth margin microcalcification',
+      output: {
+        lobes: {
+          rightLobe: {
+            type: 'right',
+            dimensions: { length: 4.5, width: 1.8, height: 1.5 },
+            volume_ml: 6.35,
+            echogenicity: 'isoechoic',
+            homogeneity: 'homogeneous',
+            vascularity: 'normal'
+          },
+          leftLobe: {
+            type: 'left',
+            dimensions: { length: 4.2, width: 1.6, height: 1.4 },
+            volume_ml: 4.93,
+            echogenicity: 'isoechoic',
+            homogeneity: 'homogeneous',
+            vascularity: 'normal'
+          },
+          isthmus: {
+            type: 'isthmus',
+            thickness_cm: 0.3,
+            echogenicity: 'isoechoic',
+            vascularity: 'normal'
+          }
+        },
+        nodules: [{
+          id: 1,
+          location: 'right upper',
+          size_cm: 1.0,
+          tirads: { C: 2, E: 2, S: 0, M: 0, F: 3, total: 7, category: 'TR5' }
+        }],
+        impression: 'Right lobe: 4.5x1.8x1.5cm (6.35mL). Left lobe: 4.2x1.6x1.4cm (4.93mL). Isthmus: 0.3cm. TR5 nodule at right upper (1.0cm).',
+        recommendation: 'FNA recommended (TR5, ≥1cm)'
+      }
     }
   ];
 }
