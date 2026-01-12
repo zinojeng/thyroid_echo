@@ -148,80 +148,207 @@ function robustJsonParse(content) {
     throw new Error('Empty or invalid content');
   }
 
+  const errors = [];
+
   // 1. 先嘗試直接解析
   try {
     return JSON.parse(content);
   } catch (e) {
-    // 繼續嘗試修復
+    errors.push(`Direct parse: ${e.message}`);
   }
 
-  // 2. 移除 markdown 代碼區塊標記
-  let cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  // 2. 移除 markdown 代碼區塊標記和前後空白
+  let cleaned = content
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
 
   try {
     return JSON.parse(cleaned);
   } catch (e) {
-    // 繼續嘗試修復
+    errors.push(`After markdown removal: ${e.message}`);
   }
 
-  // 3. 嘗試提取 JSON 物件 {...}
-  const jsonObjectMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    let jsonStr = jsonObjectMatch[0];
-
-    // 4. 修復常見的 JSON 格式問題
-    // 4a. 將單引號轉換為雙引號（但要小心字串內的單引號）
-    jsonStr = jsonStr.replace(/'/g, '"');
-
-    // 4b. 移除尾部逗號 (trailing commas)
-    jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-
-    // 4c. 為未加引號的屬性名加上引號
-    jsonStr = jsonStr.replace(/(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-
-    // 4d. 修復數字後面直接跟屬性名的情況
-    jsonStr = jsonStr.replace(/(\d)\s+([a-zA-Z_])/g, '$1, "$2');
-
+  // 3. 找到最外層的 JSON 物件（使用括號配對）
+  const jsonStr = extractJsonObject(cleaned);
+  if (jsonStr) {
+    // 3a. 嘗試直接解析提取的 JSON
     try {
       return JSON.parse(jsonStr);
     } catch (e) {
-      // 繼續嘗試其他方法
+      errors.push(`Extracted JSON: ${e.message}`);
     }
-  }
 
-  // 5. 嘗試提取 JSON 陣列 [...]
-  const jsonArrayMatch = cleaned.match(/\[[\s\S]*\]/);
-  if (jsonArrayMatch) {
-    let jsonStr = jsonArrayMatch[0];
-    jsonStr = jsonStr.replace(/'/g, '"');
-    jsonStr = jsonStr.replace(/,\s*]/g, ']');
-
+    // 3b. 嘗試修復並解析
+    const fixed = fixJsonString(jsonStr);
     try {
-      return JSON.parse(jsonStr);
+      return JSON.parse(fixed);
     } catch (e) {
-      // 繼續嘗試其他方法
+      errors.push(`Fixed JSON: ${e.message}`);
     }
   }
 
-  // 6. 最後嘗試：使用 Function 構造器（注意：這有安全風險，僅用於信任的 LLM 輸出）
-  try {
-    // 移除可能導致問題的字元
-    let safeContent = cleaned
-      .replace(/[\x00-\x1f]/g, ' ')  // 移除控制字元
-      .replace(/\n/g, '\\n')         // 轉義換行
-      .replace(/\r/g, '\\r')         // 轉義回車
-      .replace(/\t/g, '\\t');        // 轉義 tab
-
-    const jsonMatch = safeContent.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+  // 4. 嘗試處理截斷的 JSON（補上缺失的括號）
+  const completed = tryCompleteJson(cleaned);
+  if (completed) {
+    try {
+      return JSON.parse(completed);
+    } catch (e) {
+      errors.push(`Completed JSON: ${e.message}`);
     }
-  } catch (e) {
-    // 最後的錯誤
   }
 
-  // 如果所有嘗試都失敗，拋出錯誤並附上原始內容的前 200 字
-  throw new Error(`Unable to parse JSON. Content preview: ${content.substring(0, 200)}...`);
+  // 5. 最後嘗試：清理特殊字元
+  const sanitized = cleaned
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')  // 移除控制字元（保留換行和tab）
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+
+  const sanitizedJson = extractJsonObject(sanitized);
+  if (sanitizedJson) {
+    try {
+      return JSON.parse(fixJsonString(sanitizedJson));
+    } catch (e) {
+      errors.push(`Sanitized JSON: ${e.message}`);
+    }
+  }
+
+  // 記錄所有錯誤以便除錯
+  console.error('robustJsonParse failed. Errors:', errors.join('; '));
+  console.error('Original content length:', content.length);
+  console.error('Content preview:', content.substring(0, 500));
+
+  throw new Error(`Unable to parse JSON. Errors: ${errors.slice(-2).join('; ')}. Content preview: ${content.substring(0, 100)}...`);
+}
+
+/**
+ * 使用括號配對提取最外層的 JSON 物件
+ * @param {string} str - 輸入字串
+ * @returns {string|null} 提取的 JSON 字串
+ */
+function extractJsonObject(str) {
+  const start = str.indexOf('{');
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let i = start; i < str.length; i++) {
+    const char = str[i];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === '"' && !escapeNext) {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '{') depth++;
+      else if (char === '}') {
+        depth--;
+        if (depth === 0) {
+          return str.substring(start, i + 1);
+        }
+      }
+    }
+  }
+
+  // 如果沒有找到配對的結束括號，返回從開始到結尾
+  return str.substring(start);
+}
+
+/**
+ * 修復常見的 JSON 格式問題
+ * @param {string} jsonStr - JSON 字串
+ * @returns {string} 修復後的 JSON 字串
+ */
+function fixJsonString(jsonStr) {
+  let fixed = jsonStr;
+
+  // 移除尾部逗號
+  fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+
+  // 為未加引號的屬性名加上引號（更精確的正則）
+  fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3');
+
+  // 修復單引號（只在不在雙引號內時）
+  // 這個比較複雜，簡單處理：如果整個字串沒有雙引號，則轉換單引號
+  if (!fixed.includes('"')) {
+    fixed = fixed.replace(/'/g, '"');
+  }
+
+  return fixed;
+}
+
+/**
+ * 嘗試補完截斷的 JSON
+ * @param {string} str - 可能不完整的 JSON 字串
+ * @returns {string|null} 補完的 JSON 字串
+ */
+function tryCompleteJson(str) {
+  const start = str.indexOf('{');
+  if (start === -1) return null;
+
+  let jsonStr = str.substring(start);
+
+  // 計算缺少的括號
+  let braceCount = 0;
+  let bracketCount = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '{') braceCount++;
+      else if (char === '}') braceCount--;
+      else if (char === '[') bracketCount++;
+      else if (char === ']') bracketCount--;
+    }
+  }
+
+  // 如果在字串內結束，先關閉字串
+  if (inString) {
+    jsonStr += '"';
+  }
+
+  // 補上缺少的括號
+  while (bracketCount > 0) {
+    jsonStr += ']';
+    bracketCount--;
+  }
+  while (braceCount > 0) {
+    jsonStr += '}';
+    braceCount--;
+  }
+
+  return jsonStr;
 }
 
 /**
