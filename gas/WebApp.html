@@ -291,7 +291,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Thyroid Echo Report <span style="font-size: 12px; opacity: 0.7;">v1.6.4</span></h1>
+    <h1>Thyroid Echo Report <span style="font-size: 12px; opacity: 0.7;">v1.7.0</span></h1>
 
     <!-- Settings Card -->
     <div class="card settings-card">
@@ -311,6 +311,12 @@
           <option value="gemini">Google Gemini</option>
         </select>
 
+        <label for="voice-engine">Voice Recognition Engine</label>
+        <select id="voice-engine">
+          <option value="browser">Browser (Web Speech API)</option>
+          <option value="gemini">Gemini Audio (需要 Gemini API Key)</option>
+        </select>
+
         <button class="btn btn-secondary" onclick="saveSettings()">Save Settings</button>
       </div>
     </div>
@@ -320,15 +326,26 @@
       <div id="error" class="error"></div>
       <div id="success" class="success"></div>
 
-      <button class="btn btn-record" id="record-btn" onclick="toggleRecording()">
-        <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          <line x1="12" y1="19" x2="12" y2="23"/>
-          <line x1="8" y1="23" x2="16" y2="23"/>
-        </svg>
-        <span id="record-text">Click to Record</span>
-      </button>
+      <div class="btn-group" style="margin-bottom: 12px;">
+        <button class="btn btn-record" id="record-btn" onclick="toggleRecording()">
+          <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+          <span id="record-text">Click to Record</span>
+        </button>
+        <button class="btn btn-secondary" id="upload-btn" onclick="document.getElementById('audio-file').click()">
+          <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Upload Audio</span>
+        </button>
+      </div>
+      <input type="file" id="audio-file" accept="audio/*" style="display: none;" onchange="handleAudioUpload(event)">
 
       <label for="transcript">Transcript</label>
       <textarea id="transcript" placeholder="Voice input will appear here, or type manually..."></textarea>
@@ -359,8 +376,10 @@
     // State
     let isRecording = false;
     let recognition = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
     let currentResult = null;
-    let settings = { apiKey: '', provider: 'auto' };
+    let settings = { apiKey: '', provider: 'auto', voiceEngine: 'browser' };
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -375,6 +394,7 @@
         settings = JSON.parse(saved);
         document.getElementById('api-key').value = settings.apiKey || '';
         document.getElementById('provider').value = settings.provider || 'auto';
+        document.getElementById('voice-engine').value = settings.voiceEngine || 'browser';
       }
     }
 
@@ -382,6 +402,7 @@
     function saveSettings() {
       settings.apiKey = document.getElementById('api-key').value.trim();
       settings.provider = document.getElementById('provider').value;
+      settings.voiceEngine = document.getElementById('voice-engine').value;
       localStorage.setItem('thyroid_settings', JSON.stringify(settings));
       showSuccess('Settings saved!');
       toggleSettings();
@@ -445,6 +466,17 @@
 
     // Toggle recording
     function toggleRecording() {
+      const voiceEngine = document.getElementById('voice-engine').value;
+
+      if (voiceEngine === 'gemini') {
+        toggleGeminiRecording();
+      } else {
+        toggleBrowserRecording();
+      }
+    }
+
+    // Browser-based recording (Web Speech API)
+    function toggleBrowserRecording() {
       if (!recognition) {
         showError('Speech recognition not available');
         return;
@@ -456,6 +488,148 @@
         document.getElementById('transcript').value = '';
         recognition.start();
       }
+    }
+
+    // Gemini-based recording (MediaRecorder)
+    function toggleGeminiRecording() {
+      if (isRecording) {
+        stopGeminiRecording();
+      } else {
+        startGeminiRecording();
+      }
+    }
+
+    // Start Gemini recording
+    async function startGeminiRecording() {
+      const apiKey = document.getElementById('api-key').value.trim();
+      if (!apiKey) {
+        showError('Gemini Audio requires API Key. Please set it in settings.');
+        toggleSettings();
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+
+        // Try to use audio/webm first, fallback to other formats
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' :
+                         MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' :
+                         MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : '';
+
+        mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          // Stop all tracks
+          stream.getTracks().forEach(track => track.stop());
+
+          // Process the recorded audio
+          const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+          await processAudioWithGemini(audioBlob, mediaRecorder.mimeType);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        document.getElementById('record-btn').classList.add('recording');
+        document.getElementById('record-text').textContent = 'Recording... Click to Stop';
+
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        showError('Unable to access microphone. Please allow microphone access.');
+      }
+    }
+
+    // Stop Gemini recording
+    function stopGeminiRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isRecording = false;
+      document.getElementById('record-btn').classList.remove('recording');
+      document.getElementById('record-text').textContent = 'Click to Record';
+    }
+
+    // Handle audio file upload
+    function handleAudioUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const apiKey = document.getElementById('api-key').value.trim();
+      if (!apiKey) {
+        showError('Audio upload requires Gemini API Key. Please set it in settings.');
+        toggleSettings();
+        return;
+      }
+
+      // Check file size (20MB limit for inline data)
+      if (file.size > 20 * 1024 * 1024) {
+        showError('Audio file too large. Maximum size is 20MB.');
+        return;
+      }
+
+      processAudioWithGemini(file, file.type);
+      event.target.value = ''; // Reset file input
+    }
+
+    // Process audio with Gemini
+    async function processAudioWithGemini(audioBlob, mimeType) {
+      const apiKey = document.getElementById('api-key').value.trim();
+
+      showLoading(true);
+      hideMessages();
+
+      try {
+        // Convert blob to base64
+        const base64 = await blobToBase64(audioBlob);
+
+        // Call GAS function
+        google.script.run
+          .withSuccessHandler(handleAudioResult)
+          .withFailureHandler(handleError)
+          .processAudioFromWeb(base64, mimeType, apiKey, 'full');
+
+      } catch (error) {
+        showLoading(false);
+        showError('Error processing audio: ' + error.message);
+      }
+    }
+
+    // Convert blob to base64
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // Remove data URL prefix (e.g., "data:audio/webm;base64,")
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // Handle audio processing result
+    function handleAudioResult(result) {
+      showLoading(false);
+
+      if (result.success === false) {
+        showError(result.error || 'Audio processing failed');
+        return;
+      }
+
+      // Show transcript if available
+      if (result.transcript) {
+        document.getElementById('transcript').value = result.transcript;
+      }
+
+      currentResult = result;
+      displayResult(result);
     }
 
     // Analyze report

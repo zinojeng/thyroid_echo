@@ -4,14 +4,20 @@
 
 這是一個甲狀腺超音波報告 AI 結構化系統，將口述內容自動轉換為 ACR TI-RADS 2017 標準格式的 JSON 報告。
 
-**核心功能**：語音輸入（Typeless/Voquill）→ 文字 → Google Apps Script API → Groq LLM → 結構化 JSON
+**核心功能**：語音輸入 → 文字 → Google Apps Script API → LLM → 結構化 JSON
+
+**語音輸入方式**：
+- 外部軟體：Typeless / Voquill
+- 瀏覽器 Web Speech API（即時轉錄）
+- **Gemini Audio API**（高準確度，支援音訊檔案上傳）
 
 ## 技術架構
 
 ```
-Frontend: Typeless / Voquill（外部語音輸入軟體）
+Frontend: WebApp (HTML) / Typeless / Voquill
 Backend: Google Apps Script
-LLM: Groq API (llama-3.1-70b-versatile / mixtral-8x7b-32768)
+LLM: xAI Grok / OpenAI / Google Gemini
+Audio: Gemini Audio API (語音轉文字)
 Output: JSON (ACR TI-RADS 2017 格式)
 ```
 
@@ -84,6 +90,26 @@ Isthmus: 0.3 cm; echogenicity isoechoic, vascularity normal
 右側甲狀腺上極一點二公分結節，實質低回聲，高比寬，邊緣光滑，無鈣化
 ```
 
+### Gemini 語音輸入模式（v1.7.0 新增）
+
+**使用方式**：
+1. 在 WebApp 設定中選擇 Voice Recognition Engine: Gemini Audio
+2. 設定 Gemini API Key
+3. 點擊錄音按鈕開始錄音，或上傳音訊檔案
+
+**支援的音訊格式**：
+- WAV (`audio/wav`)
+- MP3 (`audio/mp3`)
+- WebM (`audio/webm`)
+- AAC (`audio/aac`)
+- OGG (`audio/ogg`)
+- FLAC (`audio/flac`)
+
+**優勢**：
+- 更高的醫學術語辨識準確度
+- 支援音訊檔案上傳（最大 20MB）
+- 同時進行語音轉錄 + 結構化處理
+
 ## 開發指南
 
 ### 程式碼規範
@@ -98,6 +124,8 @@ Isthmus: 0.3 cm; echogenicity isoechoic, vascularity normal
 - `processTiradsCodeMode(input)` - TIRADS 代碼模式解析（本地，快速）
 - `processLobeMode(input)` - 甲狀腺葉描述模式（本地，快速）
 - `processNaturalMode(input)` - 自然語言模式（需 LLM API）
+- `processAudioFromWeb(audioBase64, mimeType, apiKey, mode)` - Gemini 語音處理
+- `callGeminiAudioApi(audioBase64, mimeType, prompt, options)` - Gemini Audio API 呼叫
 - `createNoduleAssessment(params)` - 建立結節評估結果
 - `parseLobeInput(input)` - 解析葉描述輸入
 - `formatLobeDescription(lobes)` - 格式化葉描述輸出
@@ -108,6 +136,7 @@ Isthmus: 0.3 cm; echogenicity isoechoic, vascularity normal
 - 執行 `testLobeMode()` 測試葉描述模式
 - 執行 `testLobeParser()` 測試葉解析功能
 - 執行 `testConnection("api-key")` 測試 LLM API 連線
+- 執行 `testGeminiAudio("api-key")` 測試 Gemini Audio API 連線
 
 ## 部署步驟
 
@@ -157,10 +186,12 @@ Isthmus: 0.3 cm; echogenicity isoechoic, vascularity normal
 5. LLM API Key 儲存在 Script Properties，不要寫死在程式碼中
 6. 葉描述模式支援中英文混合輸入，自動轉換為標準英文報告格式
 7. 體積計算公式: V = 0.524 × L × W × H (mL)
+8. Gemini Audio API 音訊檔案上限為 20MB（inline_data 限制）
 
 ## 相關資源
 
 - [ACR TI-RADS White Paper](https://www.acr.org/Clinical-Resources/Reporting-and-Data-Systems/TI-RADS)
+- [Gemini Audio API](https://ai.google.dev/gemini-api/docs/audio) - 語音處理 API
 - [Groq API Documentation](https://console.groq.com/docs)
 - [Google Apps Script Reference](https://developers.google.com/apps-script/reference)
 - [Voquill](https://github.com/josiahsrc/voquill) - 開源語音輸入軟體

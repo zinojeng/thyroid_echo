@@ -202,6 +202,105 @@ function callGeminiApi(provider, apiKey, systemPrompt, userMessage, options) {
 }
 
 /**
+ * 呼叫 Gemini Audio API（語音轉文字 + 結構化）
+ * @param {string} audioBase64 - Base64 編碼的音訊資料
+ * @param {string} mimeType - 音訊 MIME 類型 (audio/wav, audio/mp3, audio/webm 等)
+ * @param {string} prompt - 處理提示
+ * @param {Object} options - 選項 (api_key, model)
+ * @returns {Object} 結果 { transcript, structured }
+ */
+function callGeminiAudioApi(audioBase64, mimeType, prompt, options = {}) {
+  const apiKey = options.api_key;
+  if (!apiKey) {
+    throw new Error('Missing Gemini API Key for audio processing.');
+  }
+
+  const model = options.model || 'gemini-2.0-flash';
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  // 建立音訊處理請求
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: audioBase64
+            }
+          },
+          {
+            text: prompt
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json'
+    }
+  };
+
+  const requestOptions = {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, requestOptions);
+    const statusCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (statusCode !== 200) {
+      console.error(`Gemini Audio API error: ${statusCode} - ${responseText}`);
+      throw new Error(`Gemini Audio API returned status ${statusCode}: ${responseText}`);
+    }
+
+    const result = JSON.parse(responseText);
+    const content = result.candidates[0].content.parts[0].text;
+
+    // 嘗試解析 JSON
+    try {
+      return JSON.parse(content);
+    } catch (e) {
+      // Gemini 有時會在 JSON 前後加入 markdown 標記
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]);
+      }
+      // 嘗試直接解析
+      const cleanContent = content.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleanContent);
+    }
+
+  } catch (error) {
+    console.error('Gemini Audio API call failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * 使用 Gemini Audio API 進行純語音轉錄（不進行結構化）
+ * @param {string} audioBase64 - Base64 編碼的音訊資料
+ * @param {string} mimeType - 音訊 MIME 類型
+ * @param {Object} options - 選項 (api_key, model)
+ * @returns {string} 轉錄文字
+ */
+function transcribeWithGeminiAudio(audioBase64, mimeType, options = {}) {
+  const prompt = `請將這段音訊轉錄為文字。請只輸出轉錄的文字內容，不要加任何額外說明。如果是醫學術語（特別是甲狀腺超音波相關），請保持原文。
+
+請以 JSON 格式回傳：{"transcript": "轉錄的文字內容"}`;
+
+  const result = callGeminiAudioApi(audioBase64, mimeType, prompt, options);
+  return result.transcript || '';
+}
+
+/**
  * 取得支援的服務提供者資訊
  */
 function getSupportedProviders() {

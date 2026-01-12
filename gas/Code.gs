@@ -6,7 +6,7 @@
  */
 
 // 版本號碼 - 每次更新時遞增
-const APP_VERSION = '1.6.4';
+const APP_VERSION = '1.7.0';
 
 // 版本歷史：
 // 1.0.0 - 初始版本，支援數字模式和自然語言模式
@@ -26,6 +26,7 @@ const APP_VERSION = '1.6.4';
 // 1.6.2 - 修正換行符號處理、引號字元統一、葉模式診斷解析
 // 1.6.3 - 移除重複診斷顯示，診斷只保留在 Impression 中
 // 1.6.4 - 擴充混合模式識別，支援「右側甲狀腺大小」「TI-RADS」等更多輸入格式
+// 1.7.0 - 新增 Gemini Audio API 語音輸入功能：支援錄音和音訊檔案上傳
 
 /**
  * 處理 GET 請求 - 顯示 Web App 頁面
@@ -890,4 +891,207 @@ function testConnection(apiKey) {
   const result = testLLMConnection({ api_key: apiKey });
   console.log('Connection test:', JSON.stringify(result, null, 2));
   return result;
+}
+
+// ==================== Gemini Audio API 功能 ====================
+
+/**
+ * 從 Web App 處理音訊報告（供 HTML 頁面呼叫）
+ * @param {string} audioBase64 - Base64 編碼的音訊資料
+ * @param {string} mimeType - 音訊 MIME 類型 (audio/wav, audio/mp3, audio/webm 等)
+ * @param {string} apiKey - Gemini API Key
+ * @param {string} mode - 處理模式：'transcribe' (只轉錄) 或 'full' (轉錄+結構化)
+ * @returns {Object} 處理結果
+ */
+function processAudioFromWeb(audioBase64, mimeType, apiKey, mode = 'full') {
+  try {
+    if (!audioBase64) {
+      return { success: false, error: 'Missing audio data' };
+    }
+    if (!apiKey) {
+      return { success: false, error: 'Missing Gemini API Key' };
+    }
+
+    const options = { api_key: apiKey };
+
+    if (mode === 'transcribe') {
+      // 只進行語音轉錄
+      const transcript = transcribeWithGeminiAudio(audioBase64, mimeType, options);
+      return {
+        success: true,
+        transcript: transcript,
+        mode: 'transcribe'
+      };
+    } else {
+      // 完整處理：語音轉錄 + 結構化
+      const result = processAudioReport(audioBase64, mimeType, options);
+      return result;
+    }
+  } catch (error) {
+    console.error('Audio processing error:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 處理音訊報告（語音轉錄 + 結構化）
+ * @param {string} audioBase64 - Base64 編碼的音訊資料
+ * @param {string} mimeType - 音訊 MIME 類型
+ * @param {Object} options - 選項 (api_key)
+ * @returns {Object} 結構化報告
+ */
+function processAudioReport(audioBase64, mimeType, options) {
+  // 建立音訊處理提示
+  const prompt = getAudioStructuringPrompt();
+
+  // 呼叫 Gemini Audio API
+  const audioResult = callGeminiAudioApi(audioBase64, mimeType, prompt, options);
+
+  // 如果回傳包含 transcript 和 nodules，直接使用
+  if (audioResult.nodules && Array.isArray(audioResult.nodules)) {
+    // 驗證並補充 TI-RADS 資訊
+    audioResult.nodules = audioResult.nodules.map((nodule, index) => {
+      if (!nodule.id) nodule.id = index + 1;
+
+      if (nodule.tirads) {
+        const { C, E, S, M, F } = nodule.tirads;
+        const validation = validateAndCorrectScores({ C, E, S, M, F }, true);
+
+        nodule.tirads.C = validation.scores.C;
+        nodule.tirads.E = validation.scores.E;
+        nodule.tirads.S = validation.scores.S;
+        nodule.tirads.M = validation.scores.M;
+        nodule.tirads.F = validation.scores.F;
+
+        nodule.tirads.total = calculateTotalScore(
+          validation.scores.C, validation.scores.E, validation.scores.S,
+          validation.scores.M, validation.scores.F
+        );
+        nodule.tirads.category = getTiRadsCategory(nodule.tirads.total);
+
+        const desc = scoresToDescription(validation.scores);
+        nodule.tirads.composition = desc.composition;
+        nodule.tirads.echogenicity = desc.echogenicity;
+        nodule.tirads.shape = desc.shape;
+        nodule.tirads.margin = desc.margin;
+        nodule.tirads.echogenicFoci = desc.echogenicFoci;
+
+        if (nodule.size_cm) {
+          nodule.recommendation = getRecommendation(nodule.tirads.category, nodule.size_cm);
+        }
+      }
+
+      return nodule;
+    });
+
+    // 生成印象
+    if (audioResult.nodules.length > 0) {
+      audioResult.impression = generateImpression(audioResult.nodules);
+    }
+
+    audioResult.success = true;
+    audioResult.metadata = {
+      mode: 'audio',
+      processed_at: new Date().toISOString(),
+      api_version: APP_VERSION
+    };
+
+    return audioResult;
+  }
+
+  // 如果只有 transcript，使用現有的 processReport 處理
+  if (audioResult.transcript) {
+    const report = processReport(audioResult.transcript, null, options);
+    report.transcript = audioResult.transcript;
+    report.metadata.mode = 'audio';
+    return report;
+  }
+
+  return {
+    success: false,
+    error: 'Unable to process audio content'
+  };
+}
+
+/**
+ * 取得音訊結構化處理的 Prompt
+ * @returns {string} Prompt 文字
+ */
+function getAudioStructuringPrompt() {
+  return `你是一個甲狀腺超音波報告 AI 助手。請執行以下任務：
+
+1. **語音轉錄**：將音訊內容轉錄為文字
+2. **結構化分析**：根據 ACR TI-RADS 2017 標準，將內容結構化
+
+請以 JSON 格式回傳結果：
+
+{
+  "transcript": "原始語音轉錄文字",
+  "nodules": [
+    {
+      "location": "位置 (right upper/right mid/right lower/left upper/left mid/left lower/isthmus)",
+      "size_cm": 最大徑（公分），
+      "dimensions": { "length": 長, "width": 寬, "height": 高 },
+      "tirads": {
+        "C": 成分分數 (0-2),
+        "E": 回音性分數 (0-3),
+        "S": 形狀分數 (0 或 3),
+        "M": 邊緣分數 (0, 2, 或 3),
+        "F": 回音點分數 (0-3)
+      }
+    }
+  ],
+  "lobes": {
+    "rightLobe": {
+      "type": "right",
+      "dimensions": { "length": 長, "width": 寬, "height": 高 },
+      "homogeneity": "homogeneous/heterogeneous",
+      "echogenicity": "isoechoic/hypoechoic/hyperechoic",
+      "vascularity": "normal/increased/decreased"
+    },
+    "leftLobe": { ... },
+    "isthmus": { "type": "isthmus", "thickness_cm": 厚度 }
+  },
+  "diagnoses": ["診斷列表，如有的話"]
+}
+
+注意事項：
+- Shape (S) 只能是 0 或 3（0 = 寬大於高，3 = 高大於寬）
+- Margin (M) 只能是 0、2、3（沒有 1）
+- 如果沒有結節，nodules 可以為空陣列
+- 如果沒有葉描述，lobes 可以省略
+- 中文數字請轉換為阿拉伯數字（如「一點二」→ 1.2）`;
+}
+
+/**
+ * 測試 Gemini Audio API 連線
+ * @param {string} apiKey - Gemini API Key
+ * @returns {Object} 測試結果
+ */
+function testGeminiAudio(apiKey) {
+  if (!apiKey) {
+    console.log('Usage: testGeminiAudio("your-gemini-api-key")');
+    console.log('Get your API key from: https://aistudio.google.com/apikey');
+    return { success: false, error: 'Please provide a Gemini API key as parameter' };
+  }
+
+  try {
+    // 測試用的簡單音訊（靜音 WAV）
+    // 這是一個最小的 WAV 檔案 header + 靜音資料
+    const testAudioBase64 = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
+    const result = callGeminiAudioApi(testAudioBase64, 'audio/wav',
+      '這是一個測試。請回傳 JSON: {"status": "ok", "message": "Gemini Audio API 連線成功"}',
+      { api_key: apiKey }
+    );
+
+    console.log('Gemini Audio API test result:', JSON.stringify(result, null, 2));
+    return { success: true, result };
+  } catch (error) {
+    console.error('Gemini Audio API test failed:', error);
+    return { success: false, error: error.message };
+  }
 }
