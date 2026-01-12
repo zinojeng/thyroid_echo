@@ -337,8 +337,78 @@ function parseGeminiJsonResponse(content) {
  */
 function transcribeWithGeminiAudio(audioBase64, mimeType, options = {}) {
   const prompt = getTranscriptionPrompt();
-  const result = callGeminiAudioApi(audioBase64, mimeType, prompt, options);
-  return result.transcript || '';
+  const result = callGeminiAudioApiPlainText(audioBase64, mimeType, prompt, options);
+  return result;
+}
+
+/**
+ * 呼叫 Gemini Audio API（回傳純文字，不要求 JSON）
+ * @param {string} audioBase64 - Base64 編碼的音訊資料
+ * @param {string} mimeType - 音訊 MIME 類型
+ * @param {string} prompt - 處理提示
+ * @param {Object} options - 選項 (api_key, model)
+ * @returns {string} 轉錄的純文字
+ */
+function callGeminiAudioApiPlainText(audioBase64, mimeType, prompt, options = {}) {
+  const apiKey = options.api_key;
+  if (!apiKey) {
+    throw new Error('Missing Gemini API Key for audio processing.');
+  }
+
+  const model = options.model || 'gemini-2.0-flash';
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: audioBase64
+            }
+          },
+          {
+            text: prompt
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048
+    }
+  };
+
+  const requestOptions = {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, requestOptions);
+    const statusCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (statusCode !== 200) {
+      console.error(`Gemini Audio API error: ${statusCode} - ${responseText}`);
+      throw new Error(`Gemini Audio API returned status ${statusCode}: ${responseText}`);
+    }
+
+    const result = JSON.parse(responseText);
+    const content = result.candidates[0].content.parts[0].text;
+
+    // 直接回傳文字，不嘗試解析 JSON
+    return content.trim();
+
+  } catch (error) {
+    console.error('Gemini Audio API call failed:', error);
+    throw error;
+  }
 }
 
 /**
@@ -346,73 +416,28 @@ function transcribeWithGeminiAudio(audioBase64, mimeType, options = {}) {
  * @returns {string} Prompt 文字
  */
 function getTranscriptionPrompt() {
-  return `你是一個甲狀腺超音波報告的語音轉錄助手。請將音訊內容轉錄為文字。
+  return `你是一個甲狀腺超音波報告的語音轉錄助手。請將音訊內容轉錄為純文字。
 
-## 常見醫學術語詞彙表（請優先識別這些術語）：
+## 醫學術語詞彙表（請優先識別這些術語）：
 
-### 回音性 (Echogenicity)
-- hypoechoic（低回音）
-- hyperechoic（高回音）
-- isoechoic（等回音）
-- anechoic（無回音）
-- very hypoechoic（極低回音）
-
-### 成分 (Composition)
-- solid（實質）
-- cystic（囊性）
-- spongiform（海綿狀）
-- mixed（混合）
-
-### 形狀 (Shape)
-- taller than wide（高大於寬）
-- wider than tall（寬大於高）
-
-### 邊緣 (Margin)
-- smooth（光滑）
-- irregular（不規則）
-- lobulated（分葉狀）
-- extrathyroidal extension（甲狀腺外延伸）
-
-### 鈣化 (Calcification)
-- microcalcification（微鈣化）
-- macrocalcification（粗鈣化）
-- peripheral calcification（邊緣鈣化）
-- punctate echogenic foci（點狀回音灶）
-
-### TI-RADS 相關
-- TIRADS / TI-RADS
-- TR1, TR2, TR3, TR4, TR5
-- ACR TI-RADS
-
-### 位置
-- right lobe（右葉）
-- left lobe（左葉）
-- isthmus（峽部）
-- upper pole（上極）
-- lower pole（下極）
-- mid（中段）
-
-### 血流 (Vascularity)
-- normal vascularity（正常血流）
-- increased vascularity（血流增加）
-- hypervascular（血流豐富）
-
-### 其他
-- nodule（結節）
-- homogeneous（均質）
-- heterogeneous（不均質）
-- FNA（細針抽吸）
+**回音性**: hypoechoic, hyperechoic, isoechoic, anechoic, very hypoechoic
+**成分**: solid, cystic, spongiform, mixed
+**形狀**: taller than wide, wider than tall
+**邊緣**: smooth, irregular, lobulated, extrathyroidal extension
+**鈣化**: microcalcification, macrocalcification, peripheral calcification, punctate echogenic foci
+**TI-RADS**: TIRADS, TI-RADS, TR1, TR2, TR3, TR4, TR5
+**位置**: right lobe, left lobe, isthmus, upper pole, lower pole, mid
+**血流**: normal vascularity, increased vascularity, hypervascular, isovascularity, hypervascularity
+**其他**: nodule, homogeneous, heterogeneous, FNA
 
 ## 轉錄規則：
-1. 保持原始語言（中文或英文）
-2. 數字使用阿拉伯數字（如 1.2 cm）
-3. 尺寸格式：長 x 寬 x 高（如 2.1x1.5x1.8）
-4. 醫學術語盡量使用上述標準拼寫
+1. 直接輸出轉錄的文字，不要加任何格式標記
+2. 保持原始語言（中文或英文混用皆可）
+3. 數字使用阿拉伯數字（如 1.2）
+4. 尺寸用 x 連接（如 2.1x1.5x1.8）
+5. 醫學術語使用標準拼寫
 
-請以 JSON 格式回傳結果：
-{
-  "transcript": "轉錄的文字內容"
-}`;
+請直接輸出轉錄文字，不要包含任何 JSON 格式或其他標記。`;
 }
 
 /**
