@@ -718,8 +718,28 @@ function normalizeInput(text) {
   // 轉換中文數字
   result = convertChineseNumbers(result);
 
+  // 轉換尺寸分隔符：乘、×、* → x
+  result = result.replace(/乘|×|\*/g, 'x');
+
   // 統一單位
   result = result.replace(/公分|cm|CM|厘米/g, 'cm');
+
+  // 處理 TIRADS 代碼中的空格 (例如 "TIRADS 211 22" → "TIRADS 21122")
+  result = result.replace(/TIRADS\s+(\d+)\s+(\d+)/gi, 'TIRADS $1$2');
+
+  // 處理尺寸格式：移除 x 周圍多餘空格 (例如 "1 x 2 x 3" → "1x2x3")
+  result = result.replace(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/gi, '$1x$2');
+
+  // 處理中英混合的 lobe 描述
+  result = result.replace(/右側甲狀腺的?lobe/gi, 'right lobe');
+  result = result.replace(/左側甲狀腺的?lobe/gi, 'left lobe');
+  result = result.replace(/右葉|右lobe/gi, 'right lobe');
+  result = result.replace(/左葉|左lobe/gi, 'left lobe');
+
+  // 標準化血流術語
+  result = result.replace(/hypervascularity/gi, 'increased vascularity');
+  result = result.replace(/isovascularity/gi, 'normal vascularity');
+  result = result.replace(/hypovascularity/gi, 'decreased vascularity');
 
   // 移除多餘水平空白（保留換行符）
   result = result.replace(/[^\S\r\n]+/g, ' ');
