@@ -292,12 +292,83 @@ function callGeminiAudioApi(audioBase64, mimeType, prompt, options = {}) {
  * @returns {string} 轉錄文字
  */
 function transcribeWithGeminiAudio(audioBase64, mimeType, options = {}) {
-  const prompt = `請將這段音訊轉錄為文字。請只輸出轉錄的文字內容，不要加任何額外說明。如果是醫學術語（特別是甲狀腺超音波相關），請保持原文。
-
-請以 JSON 格式回傳：{"transcript": "轉錄的文字內容"}`;
-
+  const prompt = getTranscriptionPrompt();
   const result = callGeminiAudioApi(audioBase64, mimeType, prompt, options);
   return result.transcript || '';
+}
+
+/**
+ * 取得語音轉錄的 Prompt（包含醫學術語提示）
+ * @returns {string} Prompt 文字
+ */
+function getTranscriptionPrompt() {
+  return `你是一個甲狀腺超音波報告的語音轉錄助手。請將音訊內容轉錄為文字。
+
+## 常見醫學術語詞彙表（請優先識別這些術語）：
+
+### 回音性 (Echogenicity)
+- hypoechoic（低回音）
+- hyperechoic（高回音）
+- isoechoic（等回音）
+- anechoic（無回音）
+- very hypoechoic（極低回音）
+
+### 成分 (Composition)
+- solid（實質）
+- cystic（囊性）
+- spongiform（海綿狀）
+- mixed（混合）
+
+### 形狀 (Shape)
+- taller than wide（高大於寬）
+- wider than tall（寬大於高）
+
+### 邊緣 (Margin)
+- smooth（光滑）
+- irregular（不規則）
+- lobulated（分葉狀）
+- extrathyroidal extension（甲狀腺外延伸）
+
+### 鈣化 (Calcification)
+- microcalcification（微鈣化）
+- macrocalcification（粗鈣化）
+- peripheral calcification（邊緣鈣化）
+- punctate echogenic foci（點狀回音灶）
+
+### TI-RADS 相關
+- TIRADS / TI-RADS
+- TR1, TR2, TR3, TR4, TR5
+- ACR TI-RADS
+
+### 位置
+- right lobe（右葉）
+- left lobe（左葉）
+- isthmus（峽部）
+- upper pole（上極）
+- lower pole（下極）
+- mid（中段）
+
+### 血流 (Vascularity)
+- normal vascularity（正常血流）
+- increased vascularity（血流增加）
+- hypervascular（血流豐富）
+
+### 其他
+- nodule（結節）
+- homogeneous（均質）
+- heterogeneous（不均質）
+- FNA（細針抽吸）
+
+## 轉錄規則：
+1. 保持原始語言（中文或英文）
+2. 數字使用阿拉伯數字（如 1.2 cm）
+3. 尺寸格式：長 x 寬 x 高（如 2.1x1.5x1.8）
+4. 醫學術語盡量使用上述標準拼寫
+
+請以 JSON 格式回傳結果：
+{
+  "transcript": "轉錄的文字內容"
+}`;
 }
 
 /**
