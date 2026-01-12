@@ -218,7 +218,7 @@ function callGeminiAudioApi(audioBase64, mimeType, prompt, options = {}) {
   const model = options.model || 'gemini-2.0-flash';
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  // 建立音訊處理請求
+  // 建立音訊處理請求（不使用 responseMimeType，改用手動解析）
   const payload = {
     contents: [
       {
@@ -237,8 +237,7 @@ function callGeminiAudioApi(audioBase64, mimeType, prompt, options = {}) {
     ],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 2048,
-      responseMimeType: 'application/json'
+      maxOutputTokens: 2048
     }
   };
 
@@ -265,23 +264,68 @@ function callGeminiAudioApi(audioBase64, mimeType, prompt, options = {}) {
     const content = result.candidates[0].content.parts[0].text;
 
     // 嘗試解析 JSON
-    try {
-      return JSON.parse(content);
-    } catch (e) {
-      // Gemini 有時會在 JSON 前後加入 markdown 標記
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1]);
-      }
-      // 嘗試直接解析
-      const cleanContent = content.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleanContent);
-    }
+    return parseGeminiJsonResponse(content);
 
   } catch (error) {
     console.error('Gemini Audio API call failed:', error);
     throw error;
   }
+}
+
+/**
+ * 解析 Gemini 回傳的 JSON 內容（處理各種格式）
+ * @param {string} content - Gemini 回傳的文字內容
+ * @returns {Object} 解析後的 JSON 物件
+ */
+function parseGeminiJsonResponse(content) {
+  if (!content || typeof content !== 'string') {
+    return { transcript: '' };
+  }
+
+  // 1. 先嘗試直接解析
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    // 繼續嘗試其他方法
+  }
+
+  // 2. 移除 markdown 代碼區塊標記
+  let cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // 繼續嘗試其他方法
+  }
+
+  // 3. 嘗試提取 JSON 物件 {...}
+  const jsonObjectMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonObjectMatch) {
+    try {
+      return JSON.parse(jsonObjectMatch[0]);
+    } catch (e) {
+      // 繼續嘗試其他方法
+    }
+  }
+
+  // 4. 嘗試提取 transcript 欄位
+  const transcriptMatch = content.match(/"transcript"\s*:\s*"([^"]*)"/);
+  if (transcriptMatch) {
+    return { transcript: transcriptMatch[1] };
+  }
+
+  // 5. 如果都失敗，將整個內容作為 transcript
+  // 移除 JSON 相關的格式標記
+  const plainText = content
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .replace(/^\s*\{\s*"transcript"\s*:\s*"/i, '')
+    .replace(/"\s*\}\s*$/i, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\"/g, '"')
+    .trim();
+
+  return { transcript: plainText || content };
 }
 
 /**
